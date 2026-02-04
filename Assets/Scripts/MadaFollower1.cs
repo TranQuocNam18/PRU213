@@ -4,41 +4,57 @@ using System.Collections;
 [RequireComponent(typeof(Rigidbody))]
 public class MadaFollowerAI : MonoBehaviour
 {
+    // ================= TARGET =================
     [Header("Target")]
     public Transform player;
     public Rigidbody playerRb;
     public MicListener playerMic;
 
+    // ================= MOVEMENT =================
     [Header("Movement")]
     public float moveSpeed = 2.2f;
     public float rotateSpeed = 6f;
     public float followDistance = 3f;
 
+    // ================= ATTACK =================
     [Header("Attack")]
     public float attackDistance = 1.2f;
     public float jumpscareDuration = 0.8f;
     public GameObject gameOverUI;
 
+    // ================= VISION =================
     [Header("Vision")]
     public float viewDistance = 12f;
     public float eyeHeight = 1.5f;
-    public LayerMask obstacleMask;
 
+    // ================= HEARING =================
     [Header("Hearing")]
     public float hearThreshold = 0.02f;
 
+    // ================= PLAYER LOOK =================
     [Header("Player Look")]
+    [Range(0f, 1f)]
     public float stopDot = 0.6f;
     public float disappearTime = 2.5f;
+    public float lookConfirmTime = 0.15f;
 
-    [Header("Teleport (Terrain Safe)")]
+    // ================= SEARCH / ROAM =================
+    [Header("Search / Roam")]
+    public float searchRadius = 8f;
+    public float roamRadius = 12f;
+    public float waitAtPointTime = 1.5f;
+
+    // ================= TELEPORT =================
+    [Header("Teleport / Ground")]
     public float groundRayHeight = 25f;
     public LayerMask groundMask;
 
+    // ================= ANIM =================
     [Header("Animator")]
     public string movingBool = "isMoving";
     public string chasingBool = "isChasing";
 
+    // ================= PRIVATE =================
     Rigidbody rb;
     Animator animator;
     Renderer[] renderers;
@@ -48,8 +64,16 @@ public class MadaFollowerAI : MonoBehaviour
     bool isFrozen;
     bool isChasing;
     bool isAttacking;
-    float lookTimer;
 
+    float lookTimer;
+    float lookConfirmTimer;
+
+    Vector3 lastKnownPlayerPos;
+    bool hasLastKnownPos;
+    Vector3 roamTarget;
+    float waitTimer;
+
+    // ================= START =================
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -63,23 +87,30 @@ public class MadaFollowerAI : MonoBehaviour
         HideMada();
     }
 
+    // ================= FIXED UPDATE =================
     void FixedUpdate()
     {
         if (!player || isAttacking) return;
 
-        // ===== PLAYER NHÌN → FREEZE =====
+        // ===== PLAYER NHÌN THẤY → FREEZE =====
         if (IsPlayerLookingAtMada())
         {
-            lookTimer += Time.fixedDeltaTime;
-            Freeze();
-            SetAnim(false, false);
+            lookConfirmTimer += Time.fixedDeltaTime;
 
-            if (lookTimer >= disappearTime)
-                HideMada();
+            if (lookConfirmTimer >= lookConfirmTime)
+            {
+                lookTimer += Time.fixedDeltaTime;
+                Freeze();
+                SetAnim(false, false);
 
+                if (lookTimer >= disappearTime)
+                    HideMada();
+            }
             return;
         }
 
+        // reset
+        lookConfirmTimer = 0f;
         lookTimer = 0f;
         UnFreeze();
 
@@ -95,18 +126,19 @@ public class MadaFollowerAI : MonoBehaviour
         bool canHear = CanHearPlayer();
         isChasing = canSee || canHear;
 
-        if (!isChasing)
+        if (isChasing)
         {
-            SetAnim(false, false);
+            lastKnownPlayerPos = player.position;
+            hasLastKnownPos = true;
+            ChasePlayer();
             return;
         }
 
-        // ===== CHASE =====
-        ChasePlayer();
+        // ===== KHÔNG THẤY → SEARCH / ROAM =====
+        SearchOrRoam();
     }
 
-    // ================= CHASE & ATTACK =================
-
+    // ================= CHASE =================
     void ChasePlayer()
     {
         Vector3 target = player.position;
@@ -115,32 +147,76 @@ public class MadaFollowerAI : MonoBehaviour
         Vector3 dir = target - transform.position;
         float dist = dir.magnitude;
 
-        // ATTACK
         if (dist <= attackDistance)
         {
             StartCoroutine(JumpscareSequence());
             return;
         }
 
+        MoveTo(target, true);
+    }
+
+    // ================= SEARCH / ROAM =================
+    void SearchOrRoam()
+    {
+        // SEARCH: đi tới vị trí cuối cùng của player
+        if (hasLastKnownPos)
+        {
+            MoveTo(lastKnownPlayerPos, false);
+
+            if (Vector3.Distance(transform.position, lastKnownPlayerPos) < 0.8f)
+            {
+                waitTimer += Time.fixedDeltaTime;
+                SetAnim(false, false);
+
+                if (waitTimer >= waitAtPointTime)
+                {
+                    hasLastKnownPos = false;
+                    waitTimer = 0f;
+                }
+            }
+            return;
+        }
+
+        // ROAM: lang thang xung quanh player
+        if (roamTarget == Vector3.zero || Vector3.Distance(transform.position, roamTarget) < 0.5f)
+        {
+            roamTarget = GetRandomRoamPoint();
+        }
+
+        MoveTo(roamTarget, false);
+    }
+
+    // ================= MOVE =================
+    void MoveTo(Vector3 target, bool chasing)
+    {
+        if (isFrozen) return;
+
+        target.y = transform.position.y;
+        Vector3 dir = target - transform.position;
+
         Vector3 move = dir.normalized * moveSpeed * Time.fixedDeltaTime;
         rb.MovePosition(rb.position + move);
 
-        Quaternion rot = Quaternion.LookRotation(dir);
-        rb.MoveRotation(Quaternion.Slerp(transform.rotation, rot, rotateSpeed * Time.fixedDeltaTime));
+        if (dir.sqrMagnitude > 0.01f)
+        {
+            Quaternion rot = Quaternion.LookRotation(dir);
+            rb.MoveRotation(Quaternion.Slerp(transform.rotation, rot, rotateSpeed * Time.fixedDeltaTime));
+        }
 
-        SetAnim(true, true); // Crawl
+        SetAnim(true, chasing);
     }
 
     // ================= SENSE =================
-
     bool CanSeePlayer()
     {
         Vector3 origin = transform.position + Vector3.up * eyeHeight;
         Vector3 dir = (player.position - origin).normalized;
 
-        if (Physics.Raycast(origin, dir, out RaycastHit hit, viewDistance, ~obstacleMask))
-            return hit.transform == player;
-
+        if (Physics.Raycast(origin, dir, out RaycastHit hit, viewDistance))
+        {
+            return hit.transform == player || hit.transform.IsChildOf(player);
+        }
         return false;
     }
 
@@ -149,17 +225,31 @@ public class MadaFollowerAI : MonoBehaviour
         return playerMic && playerMic.loudness > hearThreshold;
     }
 
+    // ================= PLAYER LOOK CHECK =================
     bool IsPlayerLookingAtMada()
     {
         if (!isVisible) return false;
 
-        Vector3 dir = (transform.position - player.position).normalized;
-        float dot = Vector3.Dot(player.forward, dir);
-        return dot > stopDot;
+        Camera cam = Camera.main;
+        if (!cam) return false;
+
+        Vector3 vp = cam.WorldToViewportPoint(transform.position);
+        if (vp.z <= 0f || vp.x < 0f || vp.x > 1f || vp.y < 0f || vp.y > 1f)
+            return false;
+
+        Vector3 dir = (transform.position - cam.transform.position).normalized;
+        if (Vector3.Dot(cam.transform.forward, dir) < stopDot)
+            return false;
+
+        if (Physics.Raycast(cam.transform.position, dir, out RaycastHit hit, viewDistance))
+        {
+            return hit.transform == transform || hit.transform.IsChildOf(transform);
+        }
+
+        return false;
     }
 
-    // ================= TELEPORT SAFE (FPS + TERRAIN) =================
-
+    // ================= TELEPORT =================
     void TeleportBehindPlayerSafe()
     {
         Camera cam = Camera.main;
@@ -171,24 +261,24 @@ public class MadaFollowerAI : MonoBehaviour
 
         Vector3 desiredPos = player.position + backDir * followDistance;
 
-        // Không teleport nếu còn trong FOV
         Vector3 vp = cam.WorldToViewportPoint(desiredPos);
         if (vp.z > 0 && vp.x > 0 && vp.x < 1 && vp.y > 0 && vp.y < 1)
             return;
 
-        Vector3 rayOrigin = desiredPos + Vector3.up * groundRayHeight;
-
-        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit,
-            groundRayHeight * 2f, groundMask))
+        if (Physics.Raycast(desiredPos + Vector3.up * groundRayHeight, Vector3.down,
+            out RaycastHit hit, groundRayHeight * 2f, groundMask))
         {
-            transform.position = hit.point;
-            transform.LookAt(player);
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            rb.position = hit.point + Vector3.up * 0.05f;
+            rb.rotation = Quaternion.LookRotation(player.position - rb.position);
+
             ShowMada();
         }
     }
 
     // ================= JUMPSCARE =================
-
     IEnumerator JumpscareSequence()
     {
         isAttacking = true;
@@ -196,14 +286,12 @@ public class MadaFollowerAI : MonoBehaviour
         rb.linearVelocity = Vector3.zero;
         SetAnim(false, false);
 
-        // Khóa player
         if (playerRb)
         {
             playerRb.linearVelocity = Vector3.zero;
             playerRb.isKinematic = true;
         }
 
-        // Đưa MADA sát camera
         Camera cam = Camera.main;
         if (cam)
         {
@@ -211,7 +299,6 @@ public class MadaFollowerAI : MonoBehaviour
             transform.LookAt(cam.transform);
         }
 
-        yield return StartCoroutine(CameraShake(0.4f, 0.25f));
         yield return new WaitForSeconds(jumpscareDuration);
 
         if (gameOverUI)
@@ -220,29 +307,7 @@ public class MadaFollowerAI : MonoBehaviour
         Time.timeScale = 0f;
     }
 
-    IEnumerator CameraShake(float duration, float magnitude)
-    {
-        Camera cam = Camera.main;
-        if (!cam) yield break;
-
-        Transform t = cam.transform;
-        Vector3 originalPos = t.localPosition;
-
-        float time = 0f;
-        while (time < duration)
-        {
-            t.localPosition = originalPos +
-                new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0f) * magnitude;
-
-            time += Time.deltaTime;
-            yield return null;
-        }
-
-        t.localPosition = originalPos;
-    }
-
     // ================= ANIM =================
-
     void SetAnim(bool moving, bool chasing)
     {
         if (!animator) return;
@@ -251,7 +316,6 @@ public class MadaFollowerAI : MonoBehaviour
     }
 
     // ================= FREEZE =================
-
     void Freeze()
     {
         if (isFrozen) return;
@@ -259,27 +323,30 @@ public class MadaFollowerAI : MonoBehaviour
 
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
-        animator.speed = 0f;
+        rb.isKinematic = true;
+        if (animator) animator.speed = 0f;
     }
 
     void UnFreeze()
     {
         if (!isFrozen) return;
         isFrozen = false;
-        animator.speed = 1f;
+
+        rb.isKinematic = false;
+        if (animator) animator.speed = 1f;
     }
 
     // ================= VISIBILITY =================
-
     void HideMada()
     {
         isVisible = false;
-        isChasing = false;
-        lookTimer = 0f;
-        SetAnim(false, false);
+        hasLastKnownPos = false;
+        roamTarget = Vector3.zero;
 
         foreach (var r in renderers) r.enabled = false;
         foreach (var c in colliders) c.enabled = false;
+
+        rb.isKinematic = true;
     }
 
     void ShowMada()
@@ -288,5 +355,40 @@ public class MadaFollowerAI : MonoBehaviour
 
         foreach (var r in renderers) r.enabled = true;
         foreach (var c in colliders) c.enabled = true;
+
+        rb.isKinematic = false;
+    }
+    Vector3 GetRandomRoamPoint()
+    {
+        Camera cam = Camera.main;
+
+        for (int i = 0; i < 10; i++)
+        {
+            Vector3 randomDir = Random.insideUnitSphere * roamRadius;
+            randomDir.y = 0f;
+
+            Vector3 point = player.position + randomDir;
+
+            // Tránh xuất hiện trong tầm nhìn camera
+            if (cam)
+            {
+                Vector3 vp = cam.WorldToViewportPoint(point);
+                if (vp.z > 0 && vp.x > 0 && vp.x < 1 && vp.y > 0 && vp.y < 1)
+                    continue;
+            }
+
+            // Raycast xuống đất để tìm vị trí an toàn
+            if (Physics.Raycast(point + Vector3.up * groundRayHeight,
+                Vector3.down,
+                out RaycastHit hit,
+                groundRayHeight * 2f,
+                groundMask))
+            {
+                return hit.point + Vector3.up * 0.05f;
+            }
+        }
+
+        // Fallback nếu không tìm được điểm hợp lệ
+        return transform.position;
     }
 }
