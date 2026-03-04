@@ -32,7 +32,7 @@ public class MadaFollowerAI : MonoBehaviour
     [Header("Jumpscare")]
     public Camera playerCamera;
     public Camera jumpscareCamera;
-    //public AudioSource jumpscareSound;
+    public AudioSource jumpscareSound;
     public float shakeAmount = 0.3f;
     public float attackDuration = 0.6f;
 
@@ -171,23 +171,34 @@ public class MadaFollowerAI : MonoBehaviour
         backDir.y = 0;
         backDir.Normalize();
 
-        Vector3 pos = player.position + backDir * followDistance;
-        pos.y = player.position.y;
+        Vector3 targetPos = player.position + backDir * followDistance;
 
         RaycastHit hit;
-        if (Physics.Raycast(pos + Vector3.up * 5f, Vector3.down, out hit, 20f))
+
+        // Raycast từ trên xuống để tìm mặt đất
+        if (Physics.Raycast(targetPos + Vector3.up * 10f, Vector3.down, out hit, 50f))
         {
-            rb.position = hit.point;
+            rb.position = hit.point + Vector3.up * 0.1f;
+        }
+        else
+        {
+            // Nếu không tìm được đất → đặt ngang player
+            rb.position = new Vector3(targetPos.x, player.position.y, targetPos.z);
         }
 
-        rb.rotation = Quaternion.LookRotation(player.position - pos);
+        Vector3 lookDir = player.position - rb.position;
+        lookDir.y = 0;
+        rb.rotation = Quaternion.LookRotation(lookDir);
     }
 
     // ================= JUMPSCARE =================
     IEnumerator Jumpscare()
     {
         isAttacking = true;
-
+        if (jumpscareSound != null)
+        {
+            jumpscareSound.Play();
+        }
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
@@ -247,13 +258,14 @@ public class MadaFollowerAI : MonoBehaviour
             timer += Time.deltaTime;
             yield return null;
         }
-
+        
         if (gameOverUI)
             gameOverUI.SetActive(true);
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         Time.timeScale = 0f;
+
     }
 
 
