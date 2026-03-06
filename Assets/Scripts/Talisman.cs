@@ -16,10 +16,17 @@ public class Talisman : MonoBehaviour
 
             if (pickupSound != null)
             {
-                pickupSound.Play();
+                if (pickupSound.clip != null)
+                    AudioSource.PlayClipAtPoint(pickupSound.clip, transform.position);
+                else
+                    pickupSound.Play();
             }
 
-            Destroy(gameObject, 0.1f);
+            // Hide object immediately but delay destruction to let sound play
+            foreach (Renderer r in GetComponentsInChildren<Renderer>()) r.enabled = false;
+            foreach (Collider c in GetComponentsInChildren<Collider>()) c.enabled = false;
+
+            Destroy(gameObject, 2f);
         }
     }
 }

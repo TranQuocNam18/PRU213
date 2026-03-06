@@ -78,14 +78,31 @@ public class MadaFollowerAI : MonoBehaviour
             return;
         }
 
+        // Tự động scale độ khó dựa trên số bùa
+        int collected = 0;
+        if (ObjectiveManager.Instance != null)
+        {
+            collected = ObjectiveManager.Instance.collectedTalismans;
+        }
+
+        // Độ khó cơ bản + bonus mỗi bùa
+        float currentAppearDelay = Mathf.Max(1f, appearDelay - (collected * 1.0f)); // Delay ngắn lại
+        float currentDisappearTime = Mathf.Max(0.5f, disappearTime - (collected * 0.3f)); // Nhìn nhanh biến mất hơn (nếu dã tâm cao thì nên lâu biến mất hơn? Không, khó hơn nghĩa là nó lén lút nhanh hơn, hoặc dai dẳng hơn. Ở đây khó hơn = biến mất MUỘN hơn để áp sát, nhưng vì mechanics ban đầu là disappearTime. Nếu nó biến đi thì an toàn. Vậy thì biến mất LÂU HƠN = khó hơn)
+        // Wait, the longer it takes to disappear, the scarier it is because it chases you longer while you look at it?
+        // Actually, player looking at it causes it to disappear. "if (lookTimer >= disappearTime)... Hide()"
+        // So a longer disappearTime means the player has to stare at it longer to make it go away. That is harder.
+        currentDisappearTime = disappearTime + (collected * 0.4f);
+
+        float currentMoveSpeed = moveSpeed + (collected * 0.4f); // Chạy nhanh hơn
+
         appearTimer += Time.deltaTime;
 
         // ===== Chưa xuất hiện =====
         if (!isVisible)
         {
-            if (appearTimer >= appearDelay)
+            if (appearTimer >= currentAppearDelay)
             {
-                TeleportBehindPlayer();
+                TeleportAroundPlayer();
                 Show();
             }
             return;
@@ -101,7 +118,7 @@ public class MadaFollowerAI : MonoBehaviour
                 lookTimer += Time.deltaTime;
                 SetAnim(false, false);
 
-                if (lookTimer >= disappearTime)
+                if (lookTimer >= currentDisappearTime)
                 {
                     Hide();
                 }
@@ -140,7 +157,14 @@ public class MadaFollowerAI : MonoBehaviour
             return;
         }
 
-        Vector3 move = dir.normalized * moveSpeed * Time.deltaTime;
+        int collected = 0;
+        if (ObjectiveManager.Instance != null)
+        {
+            collected = ObjectiveManager.Instance.collectedTalismans;
+        }
+        float currentMoveSpeed = moveSpeed + (collected * 0.4f); // Update speed
+        
+        Vector3 move = dir.normalized * currentMoveSpeed * Time.deltaTime;
         rb.MovePosition(rb.position + move);
 
         if (dir.sqrMagnitude > 0.01f)
@@ -165,13 +189,13 @@ public class MadaFollowerAI : MonoBehaviour
     }
 
     // ================= TELEPORT =================
-    void TeleportBehindPlayer()
+    void TeleportAroundPlayer()
     {
-        Vector3 backDir = -player.forward;
-        backDir.y = 0;
-        backDir.Normalize();
+        // Lấy Random 1 góc quanh người chơi
+        Vector2 randomCircle = Random.insideUnitCircle.normalized;
+        Vector3 spawnDir = new Vector3(randomCircle.x, 0, randomCircle.y);
 
-        Vector3 targetPos = player.position + backDir * followDistance;
+        Vector3 targetPos = player.position + spawnDir * followDistance;
 
         RaycastHit hit;
 
@@ -258,9 +282,15 @@ public class MadaFollowerAI : MonoBehaviour
             timer += Time.deltaTime;
             yield return null;
         }
-        
-        if (gameOverUI)
+        // Gọi GameOver thông qua GameManager để tự động ẩn các panel khác (máu, la bàn...)
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.GameOver();
+        }
+        else if (gameOverUI)
+        {
             gameOverUI.SetActive(true);
+        }
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;

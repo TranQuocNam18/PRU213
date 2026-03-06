@@ -3,13 +3,14 @@
 public class ObjectiveManager : MonoBehaviour
 {
     public static ObjectiveManager Instance;
+
     public bool objectiveStarted = false;
+    public bool objectiveCompleted = false;
+
     public GameObject talismanUI;
 
     public int totalTalismans = 5;
     public int collectedTalismans = 0;
-
-    public RitualDoor ritual_Door;
 
     void Awake()
     {
@@ -22,6 +23,7 @@ public class ObjectiveManager : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
     public void StartObjective()
     {
         objectiveStarted = true;
@@ -33,20 +35,19 @@ public class ObjectiveManager : MonoBehaviour
 
         Debug.Log("Nhiệm vụ nhặt bùa bắt đầu!");
     }
+
     public void CollectTalisman()
     {
+        if (!objectiveStarted) return;
+
         collectedTalismans++;
 
         Debug.Log("Collected: " + collectedTalismans);
 
         if (collectedTalismans >= totalTalismans)
         {
-            UnlockRitual();
+            objectiveCompleted = true;
+            Debug.Log("Đã nhặt đủ bùa! Hãy quay lại gặp sư thầy.");
         }
-    }
-
-    void UnlockRitual()
-    {
-        ritual_Door.OpenDoor();
     }
 }

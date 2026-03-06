@@ -1,9 +1,11 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerStamina : MonoBehaviour
 {
     public float maxStamina = 100f;
     public float stamina;
+    public Slider staminaSlider; // Thêm Slider UI
 
     [Header("Recovery")]
     public float recoveryRate = 10f;     // hoi phuc / giây
@@ -15,6 +17,12 @@ public class PlayerStamina : MonoBehaviour
     void Start()
     {
         stamina = maxStamina;
+
+        if (staminaSlider != null)
+        {
+            staminaSlider.maxValue = maxStamina;
+            staminaSlider.value = stamina;
+        }
     }
 
     void Update()
@@ -36,6 +44,12 @@ public class PlayerStamina : MonoBehaviour
         {
             stamina += recoveryRate * Time.deltaTime;
             stamina = Mathf.Clamp(stamina, 0, maxStamina);
+        }
+
+        // Cập nhật Slider UI
+        if (staminaSlider != null)
+        {
+            staminaSlider.value = stamina;
         }
     }
 

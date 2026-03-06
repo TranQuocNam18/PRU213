@@ -28,4 +28,21 @@ public class SkyManager : MonoBehaviour
 
         Debug.Log("Trời đã chuyển tối...");
     }
+
+    public void ChangeToBright()
+    {
+        RenderSettings.skybox = daySkybox;
+
+        // Phục hồi ánh sáng môi trường
+        RenderSettings.ambientIntensity = 1f;
+
+        // Phục hồi độ sáng mặt trời
+        Light dirLight = FindObjectOfType<Light>();
+        if (dirLight != null)
+        {
+            dirLight.intensity = 1f;
+        }
+
+        Debug.Log("Trời đã sáng trở lại...");
+    }
 }
