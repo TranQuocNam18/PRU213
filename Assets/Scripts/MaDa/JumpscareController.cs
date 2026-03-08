@@ -34,6 +34,16 @@ public class JumpscareController : MonoBehaviour
         //if (jumpscareSound != null)
         //    jumpscareSound.Play();
 
+        // Hide other UI
+        if (GameManager.Instance != null && GameManager.Instance.otherUIPanels != null)
+        {
+            foreach (GameObject ui in GameManager.Instance.otherUIPanels)
+            {
+                if (ui != null)
+                    ui.SetActive(false);
+            }
+        }
+
         float timer = 0f;
 
         while (timer < duration)
@@ -49,7 +59,11 @@ public class JumpscareController : MonoBehaviour
             yield return null;
         }
 
-        // Game Over ho?c reload scene
+        // Game Over
         Debug.Log("Jumpscare Finished");
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.GameOver();
+        }
     }
 }

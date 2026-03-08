@@ -5,8 +5,8 @@
 public class PlayerMoveRB : MonoBehaviour
 {
     [Header("Move")]
-    public float walkSpeed = 5f;
-    public float sprintSpeed = 8f;
+    public float walkSpeed = 2.5f;
+    public float sprintSpeed = 4.5f;
 
     [Header("Air control")]
     [Range(0f, 1f)] public float airControl = 0.3f;

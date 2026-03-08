@@ -3,8 +3,8 @@
 public class PlayerMove : MonoBehaviour
 {
     [Header("Move")]
-    public float walkSpeed = 5f;
-    public float runSpeed = 8f;
+    public float walkSpeed = 2.5f;
+    public float runSpeed = 4.5f;
     public float jumpForce = 6f;
     public bool canMove = true;
 
@@ -20,7 +20,7 @@ public class PlayerMove : MonoBehaviour
     public Transform cameraHolder;
     public float crouchCamOffset = 0.5f;
     public float camLerpSpeed = 10f;
-
+    PlayerStamina stamina;
 
     Rigidbody rb;
     Animator animator;
@@ -44,6 +44,7 @@ public class PlayerMove : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
+        stamina = GetComponent<PlayerStamina>();
         animator.applyRootMotion = false;
         originalCamHeight = cameraHolder.localPosition.y;
         originalHeight = col.height;
@@ -62,9 +63,14 @@ public class PlayerMove : MonoBehaviour
         animator.SetFloat("Speed", speedValue);
 
         // ===== SPRINT =====
-        isSprint = Input.GetKey(KeyCode.LeftShift) && speedValue > 0.1f && !isCrouch;
-        animator.SetBool("isSprint", isSprint);
-
+        isSprint = Input.GetKey(KeyCode.LeftShift)
+           && speedValue > 0.1f
+           && !isCrouch
+           && stamina.CanRun();
+        if (isSprint)
+        {
+            stamina.UseStamina(20f * Time.deltaTime);
+        }
         // ===== CROUCH TOGGLE =====
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {

@@ -4,10 +4,8 @@ using TMPro;
 public class PlayerInteract : MonoBehaviour
 {
     public float interactDistance = 3f;
-
     public GameObject interactText;
-
-    public Camera playerCamera; // camera player
+    public Camera playerCamera;
 
     void Update()
     {
@@ -18,20 +16,10 @@ public class PlayerInteract : MonoBehaviour
 
         if (Physics.Raycast(ray, out hit, interactDistance))
         {
-            NoteInteraction note = hit.collider.GetComponent<NoteInteraction>();
+            MonkNPC monk = hit.collider.GetComponentInParent<MonkNPC>();
+            ElderNPC elder = hit.collider.GetComponentInParent<ElderNPC>();
 
-            if (note != null)
-            {
-                interactText.SetActive(true);
-                interactText.GetComponent<TextMeshProUGUI>().text = "Đọc [F]";
-                return;
-            }
-
-            interactText.SetActive(false);
-
-            MonkNPC monk = hit.collider.GetComponent<MonkNPC>();
-
-            if (monk != null)
+            if (monk != null || elder != null)
             {
                 interactText.SetActive(true);
                 interactText.GetComponent<TextMeshProUGUI>().text = "Nói chuyện [F]";
