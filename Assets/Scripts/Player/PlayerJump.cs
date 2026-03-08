@@ -2,9 +2,13 @@
 
 public class PlayerJump : MonoBehaviour
 {
+    [Header("Jump Settings")]
     public float jumpForce = 5f;
     public float groundCheckDistance = 1.1f;
     public LayerMask groundLayer;
+
+    [Header("Audio")]
+    public AudioSource jumpAudio;
 
     Rigidbody rb;
     bool isGrounded;
@@ -26,8 +30,21 @@ public class PlayerJump : MonoBehaviour
 
     void Jump()
     {
-        rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+        // reset vertical velocity
+        rb.linearVelocity = new Vector3(
+            rb.linearVelocity.x,
+            0f,
+            rb.linearVelocity.z
+        );
+
+        // add jump force
         rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+
+        // play jump sound
+        if (jumpAudio != null)
+        {
+            jumpAudio.Play();
+        }
     }
 
     void CheckGround()
