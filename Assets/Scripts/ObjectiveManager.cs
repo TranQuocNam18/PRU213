@@ -47,7 +47,15 @@ public class ObjectiveManager : MonoBehaviour
         if (collectedTalismans >= totalTalismans)
         {
             objectiveCompleted = true;
+            if (GameManager.Instance != null && GameManager.Instance.currentState == GameManager.StoryState.SearchTalismans)
+            {
+                GameManager.Instance.AdvanceStoryState(GameManager.StoryState.ReturnMonk);
+            }
             Debug.Log("Đã nhặt đủ bùa! Hãy quay lại gặp sư thầy.");
+        }
+        else
+        {
+            // Paranormal event logic was removed.
         }
     }
 }

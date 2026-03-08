@@ -8,8 +8,8 @@ public class MadaFollowerAI : MonoBehaviour
     public Transform player;
     public Rigidbody playerRb;
 
-    [Header("Water State")]
-    private bool playerInWaterZone = false;
+    [Header("Environment State")]
+    private bool isInWaterZone = false;
 
     [Header("Movement")]
     public float moveSpeed = 1.8f;
@@ -37,6 +37,10 @@ public class MadaFollowerAI : MonoBehaviour
     public float attackDuration = 0.6f;
 
 
+    [Header("Audio")]
+    public AudioClip wetFootstepsSound;
+    private AudioSource footstepsSource;
+
     Rigidbody rb;
     Animator animator;
     Renderer[] renderers;
@@ -59,6 +63,11 @@ public class MadaFollowerAI : MonoBehaviour
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
 
+        footstepsSource = gameObject.AddComponent<AudioSource>();
+        footstepsSource.clip = wetFootstepsSound;
+        footstepsSource.loop = true;
+        footstepsSource.spatialBlend = 1f;
+
         HideInstant();
     }
 
@@ -71,8 +80,9 @@ public class MadaFollowerAI : MonoBehaviour
         }
         if (!player || isAttacking) return;
 
-        // Nếu player không ở vùng nước → ẩn luôn
-        if (!playerInWaterZone)
+        bool storyAllowsStalking = GameManager.Instance != null && GameManager.Instance.currentState >= GameManager.StoryState.NightStalking && GameManager.Instance.currentState != GameManager.StoryState.Win;
+
+        if (!isInWaterZone && !storyAllowsStalking)
         {
             HideInstant();
             return;
@@ -102,7 +112,7 @@ public class MadaFollowerAI : MonoBehaviour
         {
             if (appearTimer >= currentAppearDelay)
             {
-                TeleportAroundPlayer();
+                TeleportBehindPlayer();
                 Show();
             }
             return;
@@ -136,9 +146,9 @@ public class MadaFollowerAI : MonoBehaviour
     // ================= WATER SIGNAL =================
     public void SetPlayerInWater(bool value)
     {
-        playerInWaterZone = value;
+        isInWaterZone = value;
 
-        if (!value)
+        if (!value && GameManager.Instance != null && GameManager.Instance.currentState < GameManager.StoryState.NightStalking)
             HideInstant();
     }
 
@@ -189,24 +199,23 @@ public class MadaFollowerAI : MonoBehaviour
     }
 
     // ================= TELEPORT =================
-    void TeleportAroundPlayer()
+    void TeleportBehindPlayer()
     {
-        // Lấy Random 1 góc quanh người chơi
-        Vector2 randomCircle = Random.insideUnitCircle.normalized;
-        Vector3 spawnDir = new Vector3(randomCircle.x, 0, randomCircle.y);
+        // Spawns behind the player
+        Vector3 spawnDir = -player.forward;
+        spawnDir.y = 0;
+        spawnDir.Normalize();
 
         Vector3 targetPos = player.position + spawnDir * followDistance;
 
         RaycastHit hit;
 
-        // Raycast từ trên xuống để tìm mặt đất
         if (Physics.Raycast(targetPos + Vector3.up * 10f, Vector3.down, out hit, 50f))
         {
             rb.position = hit.point + Vector3.up * 0.1f;
         }
         else
         {
-            // Nếu không tìm được đất → đặt ngang player
             rb.position = new Vector3(targetPos.x, player.position.y, targetPos.z);
         }
 
@@ -321,6 +330,7 @@ public class MadaFollowerAI : MonoBehaviour
         foreach (var c in colliders) c.enabled = false;
 
         rb.isKinematic = true;
+        if (footstepsSource != null) footstepsSource.Stop();
     }
 
     void HideInstant()
@@ -332,6 +342,7 @@ public class MadaFollowerAI : MonoBehaviour
         foreach (var c in colliders) c.enabled = false;
 
         rb.isKinematic = true;
+        if (footstepsSource != null) footstepsSource.Stop();
     }
 
     void Show()
@@ -342,6 +353,7 @@ public class MadaFollowerAI : MonoBehaviour
         foreach (var c in colliders) c.enabled = true;
 
         rb.isKinematic = false;
+        if (footstepsSource != null) footstepsSource.Play();
 
         SetAnim(true, false);
     }

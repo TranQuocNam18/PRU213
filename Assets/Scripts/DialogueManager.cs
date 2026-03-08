@@ -6,7 +6,15 @@ public class DialogueManager : MonoBehaviour
     public static DialogueManager Instance;
 
     public GameObject dialoguePanel;
+    
+    [Header("Speaker Texts")]
+    public TextMeshProUGUI textMonk;
+    public TextMeshProUGUI textElder;
+    public TextMeshProUGUI textPlayer;
+    
+    [Header("Fallback Text")]
     public TextMeshProUGUI dialogueText;
+
     public bool isTalking = false;
 
     private string[] lines;
@@ -48,12 +56,59 @@ public class DialogueManager : MonoBehaviour
         index = 0;
 
         dialoguePanel.SetActive(true);
-        dialogueText.text = lines[index];
+        DisplayLine(lines[index]);
+        
         isTalking = true;
         nextLineCooldown = 0.2f;
 
         if (GameManager.Instance != null)
             GameManager.Instance.StartDialogue();
+    }
+
+    private void DisplayLine(string line)
+    {
+        // Tắt tất cả tên nhân vật trước
+        if (textMonk != null) textMonk.gameObject.SetActive(false);
+        if (textElder != null) textElder.gameObject.SetActive(false);
+        if (textPlayer != null) textPlayer.gameObject.SetActive(false);
+
+        // Đảm bảo bật nội dung thoại
+        if (dialogueText != null) dialogueText.gameObject.SetActive(true);
+
+        string contentString = line; // Lời thoại cuối cùng để hiện ra
+
+        if (line.StartsWith("Sư Thầy:"))
+        {
+            if (textMonk != null)
+            {
+                textMonk.gameObject.SetActive(true);
+                textMonk.text = "Sư Thầy";
+            }
+            contentString = line.Substring("Sư Thầy:".Length).Trim();
+        }
+        else if (line.StartsWith("Trưởng Làng:"))
+        {
+            if (textElder != null)
+            {
+                textElder.gameObject.SetActive(true);
+                textElder.text = "Trưởng Làng";
+            }
+            contentString = line.Substring("Trưởng Làng:".Length).Trim();
+        }
+        else if (line.StartsWith("Tôi:"))
+        {
+            if (textPlayer != null)
+            {
+                textPlayer.gameObject.SetActive(true);
+                textPlayer.text = "Tôi";
+            }
+            contentString = line.Substring("Tôi:".Length).Trim();
+        }
+
+        if (dialogueText != null)
+        {
+            dialogueText.text = contentString;
+        }
     }
 
     public void NextLine()
@@ -62,7 +117,7 @@ public class DialogueManager : MonoBehaviour
 
         if (index < lines.Length)
         {
-            dialogueText.text = lines[index];
+            DisplayLine(lines[index]);
         }
         else
         {
@@ -78,17 +133,17 @@ public class DialogueManager : MonoBehaviour
             GameManager.Instance.EndDialogue();
         isTalking = false;
 
-        // chỉ bắt đầu nhiệm vụ 1 lần
-        if (!ObjectiveManager.Instance.objectiveStarted)
-        {
-            ObjectiveManager.Instance.StartObjective();
-        }
-        SkyManager.Instance.ChangeToDark();
         // reset trạng thái NPC
         MonkNPC monk = FindObjectOfType<MonkNPC>();
         if (monk != null)
         {
             monk.EndTalk();
+        }
+
+        ElderNPC elder = FindObjectOfType<ElderNPC>();
+        if (elder != null)
+        {
+            elder.EndTalk();
         }
     }
 

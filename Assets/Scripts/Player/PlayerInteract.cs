@@ -17,14 +17,12 @@ public class PlayerInteract : MonoBehaviour
         if (Physics.Raycast(ray, out hit, interactDistance))
         {
             MonkNPC monk = hit.collider.GetComponentInParent<MonkNPC>();
+            ElderNPC elder = hit.collider.GetComponentInParent<ElderNPC>();
 
-            if (monk != null)
+            if (monk != null || elder != null)
             {
                 interactText.SetActive(true);
                 interactText.GetComponent<TextMeshProUGUI>().text = "Nói chuyện [F]";
-
-                // Xử lý phím F đã được chuyển sang MonkNPC.cs và DialogueManager.cs
-                // để tránh bị nhận đúp (double input)
                 return;
             }
 

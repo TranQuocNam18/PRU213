@@ -3,8 +3,8 @@
 public class PlayerMove : MonoBehaviour
 {
     [Header("Move")]
-    public float walkSpeed = 5f;
-    public float runSpeed = 8f;
+    public float walkSpeed = 2.5f;
+    public float runSpeed = 4.5f;
     public float jumpForce = 6f;
     public bool canMove = true;
 
