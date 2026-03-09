@@ -1,0 +1,13 @@
+  Determining projects to restore...
+  Nothing to do. None of the projects specified contain packages to restore.
+C:\Users\Admin\Documents\Ky_7\PRU213\PRU213\Assets\Scripts\Player\PlayerInteract.cs(4,14): error CS0101: The namespace '<global namespace>' already contains a definition for 'PlayerInteract' [C:\Users\Admin\Documents\Ky_7\PRU213\PRU213\Assembly-CSharp.csproj]
+C:\Users\Admin\Documents\Ky_7\PRU213\PRU213\Assets\Scripts\Player\PlayerInteract.cs(12,10): error CS0111: Type 'PlayerInteract' already defines a member called 'Update' with the same parameter types [C:\Users\Admin\Documents\Ky_7\PRU213\PRU213\Assembly-CSharp.csproj]
+
+Build FAILED.
+
+C:\Users\Admin\Documents\Ky_7\PRU213\PRU213\Assets\Scripts\Player\PlayerInteract.cs(4,14): error CS0101: The namespace '<global namespace>' already contains a definition for 'PlayerInteract' [C:\Users\Admin\Documents\Ky_7\PRU213\PRU213\Assembly-CSharp.csproj]
+C:\Users\Admin\Documents\Ky_7\PRU213\PRU213\Assets\Scripts\Player\PlayerInteract.cs(12,10): error CS0111: Type 'PlayerInteract' already defines a member called 'Update' with the same parameter types [C:\Users\Admin\Documents\Ky_7\PRU213\PRU213\Assembly-CSharp.csproj]
+    0 Warning(s)
+    2 Error(s)
+
+Time Elapsed 00:00:00.61

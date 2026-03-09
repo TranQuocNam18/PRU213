@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 
 public class PlayerMove : MonoBehaviour
 {
@@ -15,12 +16,18 @@ public class PlayerMove : MonoBehaviour
 
     [Header("Crouch")]
     public float crouchHeight = 1.0f;
+
     [Header("Crouch Camera")]
     float originalCamHeight;
     public Transform cameraHolder;
     public float crouchCamOffset = 0.5f;
     public float camLerpSpeed = 10f;
-    PlayerStamina stamina;
+
+    [Header("Audio")]
+    public AudioSource walkingAudio;
+    public AudioSource runningAudio;
+    public AudioSource breathingAudio;
+    public AudioSource breathFastAudio;
 
     Rigidbody rb;
     Animator animator;
@@ -35,6 +42,12 @@ public class PlayerMove : MonoBehaviour
     float originalHeight;
     Vector3 originalCenter;
 
+    string currentAudioState = "";
+
+    int runLoopCount = 0;
+    float lastRunTime = 0f;
+    bool breathFastPlaying = false;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -44,11 +57,13 @@ public class PlayerMove : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
-        stamina = GetComponent<PlayerStamina>();
         animator.applyRootMotion = false;
+
         originalCamHeight = cameraHolder.localPosition.y;
         originalHeight = col.height;
         originalCenter = col.center;
+
+        PlayStateSound("idle");
     }
 
     void Update()
@@ -63,15 +78,10 @@ public class PlayerMove : MonoBehaviour
         animator.SetFloat("Speed", speedValue);
 
         // ===== SPRINT =====
-        isSprint = Input.GetKey(KeyCode.LeftShift)
-           && speedValue > 0.1f
-           && !isCrouch
-           && stamina.CanRun();
-        if (isSprint)
-        {
-            stamina.UseStamina(20f * Time.deltaTime);
-        }
-        // ===== CROUCH TOGGLE =====
+        isSprint = Input.GetKey(KeyCode.LeftShift) && speedValue > 0.1f && !isCrouch;
+        animator.SetBool("isSprint", isSprint);
+
+        // ===== CROUCH =====
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
             ToggleCrouch();
@@ -85,6 +95,7 @@ public class PlayerMove : MonoBehaviour
         );
 
         animator.SetBool("isGrounded", isGrounded);
+
         float targetY = isCrouch
         ? originalCamHeight - crouchCamOffset
         : originalCamHeight;
@@ -93,8 +104,32 @@ public class PlayerMove : MonoBehaviour
         camPos.y = Mathf.Lerp(camPos.y, targetY, Time.deltaTime * camLerpSpeed);
         cameraHolder.localPosition = camPos;
 
+        // ===== AUDIO STATE =====
+        if (speedValue < 0.1f)
+        {
+            PlayStateSound("idle");
+        }
+        else if (isSprint)
+        {
+            PlayStateSound("run");
+        }
+        else
+        {
+            PlayStateSound("walk");
+        }
 
-        // ===== JUMP REQUEST =====
+        // ===== COUNT RUN LOOPS =====
+        if (currentAudioState == "run" && runningAudio.isPlaying)
+        {
+            if (runningAudio.time < lastRunTime)
+            {
+                runLoopCount++;
+            }
+
+            lastRunTime = runningAudio.time;
+        }
+
+        // ===== JUMP =====
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isCrouch)
         {
             jumpRequest = true;
@@ -112,12 +147,10 @@ public class PlayerMove : MonoBehaviour
             transform.forward * v +
             transform.right * h;
 
-        // Move only XZ – không đụng Y
         rb.MovePosition(
             rb.position + move * speed * Time.fixedDeltaTime
         );
 
-        // ===== APPLY JUMP =====
         if (jumpRequest)
         {
             rb.linearVelocity = new Vector3(
@@ -129,7 +162,6 @@ public class PlayerMove : MonoBehaviour
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             jumpRequest = false;
         }
-
     }
 
     void ToggleCrouch()
@@ -142,6 +174,7 @@ public class PlayerMove : MonoBehaviour
         if (isCrouch)
         {
             col.height = crouchHeight;
+
             col.center = new Vector3(
                 originalCenter.x,
                 originalCenter.y - (originalHeight - crouchHeight) / 2f,
@@ -155,4 +188,72 @@ public class PlayerMove : MonoBehaviour
         }
     }
 
+    void PlayStateSound(string state)
+    {
+        if (currentAudioState == state) return;
+
+        currentAudioState = state;
+
+        walkingAudio.Stop();
+        runningAudio.Stop();
+
+        if (state == "walk")
+        {
+            breathingAudio.Stop();
+            breathFastAudio.Stop();
+
+            walkingAudio.loop = true;
+            walkingAudio.Play();
+        }
+
+        if (state == "run")
+        {
+            breathingAudio.Stop();
+            breathFastAudio.Stop();
+
+            runningAudio.loop = true;
+            runningAudio.Play();
+        }
+
+        if (state == "idle")
+        {
+            walkingAudio.Stop();
+            runningAudio.Stop();
+
+            if (runLoopCount >= 3 && !breathFastPlaying)
+            {
+                StartCoroutine(PlayBreathFast());
+            }
+            else
+            {
+                if (!breathingAudio.isPlaying)
+                {
+                    breathingAudio.loop = true;
+                    breathingAudio.Play();
+                }
+            }
+
+            runLoopCount = 0;
+        }
+    }
+
+    IEnumerator PlayBreathFast()
+    {
+        breathFastPlaying = true;
+
+        breathingAudio.Stop();
+
+        breathFastAudio.loop = false;
+        breathFastAudio.Play();
+
+        yield return new WaitForSeconds(breathFastAudio.clip.length);
+
+        breathFastPlaying = false;
+
+        if (currentAudioState == "idle")
+        {
+            breathingAudio.loop = true;
+            breathingAudio.Play();
+        }
+    }
 }
