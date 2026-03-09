@@ -11,19 +11,30 @@ public class MonkNPC : MonoBehaviour
 
     // private static readonly - Unity KHÔNG serialize, luôn dùng đúng giá trị trong code
     private static readonly string[] linesMeetMonk = new string[] {
-        "Sư Thầy: A Di Đà Phật. Làng này vốn yên bình nhưng gần đây âm khí rất nặng.",
-        "Tôi: Cháu không tin vào mấy chuyện tâm linh đâu. Nhưng đúng là không khí ở đây thật quái lạ.",
-        "Sư Thầy: Trời sắp tối rồi, cậu nên quay lại nhà trưởng làng nghỉ ngơi đi.",
-        "Tôi: Vâng cháu hiểu rồi.",
-        "Sư Thầy: Đi cẩn thận, tuyệt đối đừng lại gần ao hồ lúc nhập nhoạng tối..."
+        "Thầy Pháp: Ta đã chờ con đến đây.",
+        "Tôi: Thầy là ai?",
+        "Thầy Pháp: Ta là người trông coi ngôi chùa cổ này... và cũng là người trấn giữ những thứ không nên tồn tại.",
+        "Tôi: Ý thầy là mấy lời đồn về ma quỷ trong làng sao?",
+        "Thầy Pháp: Khi con bước vào đây, ta đã cảm nhận được âm khí bám theo con.",
+        "Tôi: Âm khí? Cháu chỉ đi ngang qua mấy cái hồ thôi mà.",
+        "Thầy Pháp: Chính những hồ nước đó là nơi Ma Da trú ngụ.",
+        "Thầy Pháp: Những vong hồn chết đuối không siêu thoát, luôn tìm người thế mạng.",
+        "Tôi: Thầy nói vậy là thứ đó... có thật?",
+        "Thầy Pháp: Đêm nay đừng lại gần bất kỳ ao hồ nào. Nếu không... nó sẽ tìm đến con.",
+        "Thầy Pháp: Tốt nhất con nên quay lại nhà trưởng làng nghỉ ngơi đi.",
+        "Thầy Pháp: Đi đi trước khi trời tối hẳn.",
+        "Tôi: Vâng cháu hiểu rồi."
     };
 
     private static readonly string[] linesPreGame = new string[] {
-        "Sư Thầy: Con đã thu thập đủ 5 lá bùa rồi sao! Tốt lắm.",
-        "Tôi: Thầy ơi, mau tìm cách đuổi nó đi!",
-        "Sư Thầy: Bây giờ, hãy dùng sức mạnh của ngũ hành Kim, Mộc, Thủy, Hỏa, Thổ để phong ấn nó!!",
-        "Sư Thầy: Cẩn thận, tâm trí con phải thật tập trung...",
-        "Sư Thầy: Nếu thất bại, con sẽ bị Ma Da chiếm lấy linh hồn!!"
+        "Thầy Pháp: Tốt lắm... con đã tìm đủ 5 lá bùa phong ấn.",
+        "Tôi: Thầy ơi, thứ đó vẫn đang đuổi theo cháu!",
+        "Thầy Pháp: Bình tĩnh. Đây là nghi thức phong ấn cuối cùng.",
+        "Thầy Pháp: Nhưng con phải tự tay hoàn thành ấn chú.",
+        "Tôi: Cháu phải làm gì?",
+        "Thầy Pháp: Hãy vẽ lại phù chú phong ấn bằng tất cả sự tập trung của con.",
+        "Thầy Pháp: Nếu nghi thức thất bại...",
+        "Thầy Pháp: Ma Da sẽ chiếm lấy linh hồn của con."
     };
 
     void Update()
@@ -62,37 +73,24 @@ public class MonkNPC : MonoBehaviour
         {
             GameManager.Instance.AdvanceStoryState(GameManager.StoryState.Minigame);
 
-            if (!hasPreGameTalked)
+            if (ObjectiveManager.Instance != null && ObjectiveManager.Instance.talismanUI != null)
             {
-                if (ObjectiveManager.Instance != null && ObjectiveManager.Instance.talismanUI != null)
-                {
-                    ObjectiveManager.Instance.talismanUI.SetActive(false);
-                }
+                ObjectiveManager.Instance.talismanUI.SetActive(false);
+            }
 
-                dialogueManager.StartDialogue(linesPreGame);
-                hasPreGameTalked = true;
-            }
-            else
-            {
-                SealingMinigame minigame = FindObjectOfType<SealingMinigame>();
-                if (minigame == null)
-                {
-                    GameObject go = new GameObject("SealingMinigame");
-                    minigame = go.AddComponent<SealingMinigame>();
-                }
-                minigame.StartMinigame();
-            }
+            // In DialogueManager, we'll hook the end of dialogue to start minigame directly if state is Minigame
+            dialogueManager.StartDialogue(linesPreGame);
         }
         else if (GameManager.Instance.currentState == GameManager.StoryState.SearchTalismans)
         {
             dialogueManager.StartDialogue(new string[] {
-                "Sư Thầy: Hãy tìm bùa đi đã, bần tăng sẽ giúp con phong ấn nó."
+                "Thầy Pháp: Hãy tìm bùa đi đã, bần đạo sẽ giúp con phong ấn nó."
             });
         }
         else
         {
             dialogueManager.StartDialogue(new string[] {
-                "Sư Thầy: A Di Đà Phật."
+                "Thầy Pháp: Âm khí trong làng ngày càng nặng... con phải cẩn thận."
             });
         }
     }

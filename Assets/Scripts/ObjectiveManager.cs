@@ -44,6 +44,11 @@ public class ObjectiveManager : MonoBehaviour
 
         Debug.Log("Collected: " + collectedTalismans);
 
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.UpdateQuestUI();
+        }
+
         if (collectedTalismans >= totalTalismans)
         {
             objectiveCompleted = true;

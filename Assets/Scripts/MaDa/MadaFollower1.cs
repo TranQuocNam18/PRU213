@@ -159,11 +159,22 @@ public class MadaFollowerAI : MonoBehaviour
         target.y = transform.position.y;
 
         Vector3 dir = target - transform.position;
-        float dist = dir.magnitude;
+        
+        float horizontalDist = dir.magnitude;
+        float verticalDist = Mathf.Abs(transform.position.y - player.position.y);
 
-        if (dist <= attackDistance)
+        if (horizontalDist <= attackDistance && verticalDist <= 2.5f)
         {
-            StartCoroutine(Jumpscare());
+            if (GameManager.Instance != null && GameManager.Instance.currentState == GameManager.StoryState.NightStalking)
+            {
+                // Chỉ dọa rồi biến mất chứ không giết
+                if (jumpscareSound != null) jumpscareSound.Play();
+                Hide();
+            }
+            else
+            {
+                StartCoroutine(Jumpscare());
+            }
             return;
         }
 

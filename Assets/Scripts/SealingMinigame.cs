@@ -295,66 +295,16 @@ public class SealingMinigame : MonoBehaviour
     void WinGame()
     {
         isPlaying = false;
-        isCutscenePlaying = true;
         
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-        
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        Time.timeScale = 0f;
+
         // Phát âm thanh win
         if (winCutsceneSound != null)
             audioSrc.PlayOneShot(winCutsceneSound);
-
-        StartCoroutine(WinCutsceneCoroutine());
-    }
-
-    System.Collections.IEnumerator WinCutsceneCoroutine()
-    {
-        // Phục hồi thời gian để chạy cutscene
-        Time.timeScale = 1f;
-        
-        // Chuyển trời sáng
-        if (SkyManager.Instance != null)
-            SkyManager.Instance.ChangeToBright();
-
-        // Tìm Mada và tạo hiệu ứng tiêu biến
-        JumpscareController jumpscare = FindObjectOfType<JumpscareController>();
-        GameObject mada = null;
-        if (jumpscare != null) mada = jumpscare.mada;
-        
-        if (mada != null)
-        {
-            // Tạm thời Disable AI để nó không đuổi nữa
-            MadaFollowerAI madaAI = mada.GetComponent<MadaFollowerAI>();
-            if (madaAI != null) madaAI.enabled = false;
-
-            // Đổi màu thành đỏ/cam như bị thiêu đốt hoặc thêm ParticleSystem
-            Renderer[] renderers = mada.GetComponentsInChildren<Renderer>();
-
-            float burnTime = 3f;
-            float t = 0;
-            while (t < burnTime)
-            {
-                t += Time.deltaTime;
-                foreach (Renderer r in renderers)
-                {
-                    if (r.material.HasProperty("_Color"))
-                    {
-                        Color c = r.material.color;
-                        r.material.color = Color.Lerp(c, Color.red, Time.deltaTime * 2f);
-                    }
-                }
-                mada.transform.localScale = Vector3.Lerp(mada.transform.localScale, Vector3.zero, Time.deltaTime);
-                yield return null;
-            }
-
-            Destroy(mada);
-        }
-        else
-        {
-            yield return new WaitForSeconds(3f);
-        }
-
-        // Hiện bảng vàng chiến thắng
+            
+        // Hiện bảng vàng chiến thắng ngay lập tức
         if (customWinUI != null)
         {
             customWinUI.SetActive(true);
@@ -363,12 +313,6 @@ public class SealingMinigame : MonoBehaviour
         {
             won = true;
         }
-        
-        isCutscenePlaying = false;
-        
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-        Time.timeScale = 0f;
     }
 
     void LoseGame()
@@ -390,9 +334,6 @@ public class SealingMinigame : MonoBehaviour
 
     void OnGUI()
     {
-        // Đang xem cutscene thiêu đốt thì ko vẽ UI QTE hay Win Panel
-        if (isCutscenePlaying) return;
-
         if (isPlaying)
         {
             GUIStyle textStyle = new GUIStyle(GUI.skin.label);

@@ -6,19 +6,26 @@ public class ElderNPC : MonoBehaviour
 
     // private để Unity KHÔNG serialize - đảm bảo dùng đúng giá trị trong code
     private static readonly string[] linesMeetElder = new string[] {
-        "Trưởng Làng: Chào cậu thanh niên. Lâu lắm mới có người lạ đến ngôi làng này.",
-        "Tôi: Chào bác. Cháu tới đây để tham quan ngôi làng sinh thái nghe đồn là bị ma ám này.",
-        "Trưởng Làng: Trông cậu không giống người đến để viếng thăm đền thờ. Dạo này làng có nhiều chuyện lạ lắm...",
-        "Trưởng Làng: Cậu nên đến gặp Thầy Mùi ở đền thờ trên đồi tĩnh tâm trước khi trời tối."
+        "Trưởng Làng: Chào cậu thanh niên... Lâu lắm rồi mới có người lạ đến làng này.",
+        "Tôi: Cháu đến du lịch thôi. Nghe nói nơi này từng là làng du lịch sinh thái nổi tiếng.",
+        "Trưởng Làng: ...Ngày xưa là vậy.",
+        "Trưởng Làng: Nhưng dạo gần đây trong làng xảy ra nhiều chuyện lạ. Người ngoài ít ai dám tới.",
+        "Tôi: Cháu cũng nghe mấy lời đồn ma quỷ trên mạng, nhưng chắc chỉ là tin đồn thôi.",
+        "Trưởng Làng: ...Cậu nên đến ngôi chùa cổ ở rìa làng và gặp Sư Thầy.",
+        "Trưởng Làng: Ông ấy biết rõ những chuyện đang xảy ra ở đây hơn ta."
     };
 
     private static readonly string[] linesElderQuest = new string[] {
-        "Trưởng Làng: Lạy trời Phật, cậu vẫn còn sống! Nó đang tìm cậu...",
-        "Tôi: Bác trưởng làng... thứ đó là gì vậy?!",
-        "Trưởng Làng: Đó là Ma Da, một oan hồn dưới nước không thể siêu thoát.",
-        "Tôi: Cháu phải làm sao đây?",
-        "Trưởng Làng: Cậu cần tìm 5 lá bùa được giấu quanh làng để Thầy Mùi làm lễ phong ấn.",
-        "Trưởng Làng: Mau lên trước khi quá muộn!"
+        "Trưởng Làng: Trời Phật phù hộ... cậu vẫn còn sống!",
+        "Tôi: Bác trưởng làng! Thứ gì đó... nó đang bám theo cháu!",
+        "Trưởng Làng: Ta biết... đó là Ma Da.",
+        "Tôi: Vậy mấy chuyện cháu nghe... đều là thật sao?",
+        "Trưởng Làng: Những linh hồn chết đuối bị mắc kẹt dưới nước.",
+        "Trưởng Làng: Chúng chỉ có thể siêu thoát khi có người khác chết thay.",
+        "Tôi: Cháu phải làm gì bây giờ?!",
+        "Trưởng Làng: Trong làng có 5 lá bùa phong ấn đã bị thất lạc.",
+        "Trưởng Làng: Nếu cậu tìm đủ và mang đến cho Sư Thầy, ông ấy có thể làm nghi thức trừ tà.",
+        "Trưởng Làng: Mau lên... trước khi nó tìm được cậu."
     };
 
     bool playerInRange = false;

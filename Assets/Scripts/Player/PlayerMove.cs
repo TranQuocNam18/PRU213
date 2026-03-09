@@ -42,6 +42,10 @@ public class PlayerMove : MonoBehaviour
     float originalHeight;
     Vector3 originalCenter;
 
+    [Header("Stamina")]
+    public PlayerStamina playerStamina;
+    public float staminaDrainRate = 20f; // stamina tiêu hao mỗi giây khi sprint
+
     string currentAudioState = "";
 
     int runLoopCount = 0;
@@ -78,7 +82,15 @@ public class PlayerMove : MonoBehaviour
         animator.SetFloat("Speed", speedValue);
 
         // ===== SPRINT =====
-        isSprint = Input.GetKey(KeyCode.LeftShift) && speedValue > 0.1f && !isCrouch;
+        bool wantSprint = Input.GetKey(KeyCode.LeftShift) && speedValue > 0.1f && !isCrouch;
+        bool canRun = playerStamina == null || playerStamina.CanRun();
+        isSprint = wantSprint && canRun;
+
+        if (isSprint && playerStamina != null)
+        {
+            playerStamina.UseStamina(staminaDrainRate * Time.deltaTime);
+        }
+
         animator.SetBool("isSprint", isSprint);
 
         // ===== CROUCH =====

@@ -9,6 +9,9 @@ public class GameManager : MonoBehaviour
     public GameObject gameOverPanel;
     public MadaFollowerAI madaAI;
     public GameObject[] otherUIPanels;
+    
+    [Header("Quest UI")]
+    // Will dynamically find TalismanUI to display quests
 
     public bool isGameOver = false;
     public bool isDialogue = false; // thêm trạng thái hội thoại
@@ -31,9 +34,10 @@ public class GameManager : MonoBehaviour
     private int currentIntroIndex = 0;
     private float introInputCooldown = 0.5f;
     private string[] introLines = new string[] {
-        "Trò chơi bắt đầu bằng một đoạn hội thoại và màn hình máy tính/điện thoại, cho thấy nhân vật chính (Player) đang đọc các bài viết về một \"Ngôi làng du lịch sinh thái bị ma ám\".",
-        "Vốn là một người duy vật, ưa khám phá và không tin vào tâm linh, anh chàng tỏ ra nghi hoặc, buông lời chế giễu những tin đồn này.",
-        "Để chứng minh mọi người đang thêu dệt, anh lập tức xách balo du lịch đến ngôi làng đó."
+        "Một buổi tối bình thường... tôi đang lướt điện thoại và đọc được hàng loạt bài viết về một \"ngôi làng du lịch sinh thái bị ma ám\".",
+        "Những tin đồn nói rằng những hồ nước trong làng bị ám bởi Ma Da – những vong hồn chết đuối luôn tìm người thế mạng.",
+        "Là một người thích khám phá và không tin tâm linh, tôi quyết định tự mình đến đó xem thử.",
+        "Tôi sẽ là người chứng minh tất cả chỉ là tin đồn."
     };
 
     void Awake()
@@ -53,6 +57,7 @@ public class GameManager : MonoBehaviour
         gameOverPanel.SetActive(false);
         CreateIntroUI();
         ShowIntroLine();
+        UpdateQuestUI();
     }
 
     void Update()
@@ -71,6 +76,58 @@ public class GameManager : MonoBehaviour
                 ShowIntroLine();
                 introInputCooldown = 0.2f;
             }
+        }
+    }
+
+    public void UpdateQuestUI()
+    {
+        TalismanUI ui = FindFirstObjectByType<TalismanUI>();
+        // Fallback for older Unity versions:
+        if (ui == null) ui = FindObjectOfType<TalismanUI>();
+
+        if (ui == null || ui.talismanText == null) return;
+
+        // Ensure both the object AND its parent Canvas chain are active
+        ui.gameObject.SetActive(true);
+        Transform parent = ui.transform.parent;
+        while (parent != null)
+        {
+            parent.gameObject.SetActive(true);
+            parent = parent.parent;
+        }
+
+        switch (currentState)
+        {
+            case StoryState.Intro:
+                ui.talismanText.text = "Đi nói chuyện với trưởng làng";
+                break;
+            case StoryState.MeetElder:
+                ui.talismanText.text = "Nói chuyện với trưởng làng";
+                break;
+            case StoryState.MeetMonk:
+                ui.talismanText.text = "Đi đến Thầy Pháp";
+                break;
+            case StoryState.NightStalking:
+                ui.talismanText.text = "Đi về làng nói chuyện trưởng làng";
+                break;
+            case StoryState.SearchTalismans:
+                int count = 0;
+                int total = 5;
+                if (ObjectiveManager.Instance != null)
+                {
+                    count = ObjectiveManager.Instance.collectedTalismans;
+                    total = ObjectiveManager.Instance.totalTalismans;
+                }
+                ui.talismanText.text = $"Tìm {total} lá bùa ({count}/{total})";
+                break;
+            case StoryState.ReturnMonk:
+                ui.talismanText.text = "Quay lại gặp Thầy Pháp";
+                break;
+            case StoryState.Minigame:
+            case StoryState.Win:
+                ui.talismanText.text = "";
+                ui.gameObject.SetActive(false);
+                break;
         }
     }
 
@@ -138,6 +195,13 @@ public class GameManager : MonoBehaviour
         currentState = newState;
         Debug.Log("Story State Advanced to: " + newState.ToString());
 
+        UpdateQuestUI();
+
+        if (TalismanCompass.Instance != null)
+        {
+            TalismanCompass.Instance.UpdateWaypoints();
+        }
+
         if (newState == StoryState.NightStalking)
         {
             if (SkyManager.Instance != null)
@@ -149,6 +213,11 @@ public class GameManager : MonoBehaviour
                 madaAI.enabled = true;
                 madaAI.gameObject.SetActive(true);
             }
+        }
+        else if (newState == StoryState.SearchTalismans)
+        {
+            if (SkyManager.Instance != null)
+                SkyManager.Instance.EnableFog();
         }
     }
 
@@ -218,6 +287,18 @@ public class GameManager : MonoBehaviour
     public void EndDialogue()
     {
         isDialogue = false;
+
+        if (currentState == StoryState.Minigame)
+        {
+            SealingMinigame minigame = FindObjectOfType<SealingMinigame>();
+            if (minigame == null)
+            {
+                GameObject go = new GameObject("SealingMinigame");
+                minigame = go.AddComponent<SealingMinigame>();
+            }
+            minigame.StartMinigame();
+            return;
+        }
 
         Time.timeScale = 1f;
         if (madaAI != null) madaAI.enabled = true;

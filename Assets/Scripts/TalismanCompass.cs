@@ -3,8 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Compass HUD - hiển thị hướng đến từng talisman còn lại trên thanh compass nằm ngang.
+/// Compass HUD - hiển thị hướng đến từng talisman hoặc NPC còn lại trên thanh compass nằm ngang.
 /// 
 /// === SETUP TRONG UNITY EDITOR ===
 /// 1. Tạo Canvas (Screen Space - Overlay, Sort Order 10)
@@ -53,18 +52,53 @@ public class TalismanCompass : MonoBehaviour
         public TextMeshProUGUI distText;
     }
 
+    public static TalismanCompass Instance;
+
+    void Awake()
+    {
+        if (Instance == null) Instance = this;
+    }
+
     void Start()
     {
-        // Tự động đăng ký tất cả talisman trong scene
-        Talisman[] allTalismans = FindObjectsByType<Talisman>(FindObjectsSortMode.None);
+        // Tự động đăng ký tất cả hiển thị ban đầu
+        UpdateWaypoints();
 
-        foreach (Talisman t in allTalismans)
-        {
-            RegisterTalisman(t.transform);
-        }
-
-        // Nếu chưa bắt đầu objective thì ẩn compass
+        // Nếu chưa bắt đầu objective thì vẫn hiện compass cho NPC
         UpdateCompassVisibility();
+    }
+
+    public void UpdateWaypoints()
+    {
+        // Clear old waypoints
+        foreach (var entry in entries)
+        {
+            if (entry.markerRect != null) Destroy(entry.markerRect.gameObject);
+        }
+        entries.Clear();
+
+        if (GameManager.Instance == null) return;
+
+        var state = GameManager.Instance.currentState;
+
+        if (state == GameManager.StoryState.Intro || state == GameManager.StoryState.MeetElder || state == GameManager.StoryState.NightStalking)
+        {
+            ElderNPC elder = FindObjectOfType<ElderNPC>();
+            if (elder != null) RegisterTalisman(elder.transform);
+        }
+        else if (state == GameManager.StoryState.MeetMonk || state == GameManager.StoryState.ReturnMonk)
+        {
+            MonkNPC monk = FindObjectOfType<MonkNPC>();
+            if (monk != null) RegisterTalisman(monk.transform);
+        }
+        else if (state == GameManager.StoryState.SearchTalismans)
+        {
+            Talisman[] allTalismans = FindObjectsByType<Talisman>(FindObjectsSortMode.None);
+            foreach (Talisman t in allTalismans)
+            {
+                RegisterTalisman(t.transform);
+            }
+        }
     }
 
     /// <summary>
@@ -168,10 +202,10 @@ public class TalismanCompass : MonoBehaviour
     {
         if (compassBar == null) return;
 
-        bool objectiveActive = ObjectiveManager.Instance != null &&
-                               ObjectiveManager.Instance.objectiveStarted &&
-                               !ObjectiveManager.Instance.objectiveCompleted;
+        bool showCompass = GameManager.Instance != null && 
+                           GameManager.Instance.currentState >= GameManager.StoryState.Intro &&
+                           GameManager.Instance.currentState < GameManager.StoryState.Minigame;
 
-        compassBar.gameObject.SetActive(objectiveActive);
+        compassBar.gameObject.SetActive(showCompass);
     }
 }

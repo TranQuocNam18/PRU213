@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 
 public class SkyManager : MonoBehaviour
 {
@@ -23,29 +24,42 @@ public class SkyManager : MonoBehaviour
     {
         RenderSettings.skybox = nightSkybox;
 
-        // Giảm ánh sáng môi trường
-        RenderSettings.ambientIntensity = 0.2f;
-
-        // Tối hơn
-        Light dirLight = FindObjectOfType<Light>();
-        if (dirLight != null)
-        {
-            dirLight.intensity = 0.1f;
-        }
-
-        // Bật Fog
-        RenderSettings.fog = true;
-        RenderSettings.fogColor = new Color(0.05f, 0.05f, 0.05f); // đen xám
-        RenderSettings.fogMode = FogMode.ExponentialSquared;
-        RenderSettings.fogDensity = 0.035f; // khá dày
-
         if (ambientNightSound != null && audioSrc != null)
         {
             audioSrc.clip = ambientNightSound;
             audioSrc.Play();
         }
 
-        Debug.Log("Trời đã chuyển tối, có sương mù và âm thanh môi trường...");
+        StartCoroutine(FadeToDarkRoutine());
+
+        Debug.Log("Trời đã chuyển tối, và âm thanh môi trường...");
+    }
+
+    private IEnumerator FadeToDarkRoutine()
+    {
+        float duration = 4f;
+        float time = 0;
+        float startAmbient = RenderSettings.ambientIntensity;
+        Light dirLight = FindObjectOfType<Light>();
+        float startLight = dirLight != null ? dirLight.intensity : 1f;
+
+        while (time < duration)
+        {
+            time += Time.deltaTime;
+            float t = time / duration;
+            RenderSettings.ambientIntensity = Mathf.Lerp(startAmbient, 0.2f, t);
+            if (dirLight != null) dirLight.intensity = Mathf.Lerp(startLight, 0.1f, t);
+            yield return null;
+        }
+    }
+
+    public void EnableFog()
+    {
+        RenderSettings.fog = true;
+        RenderSettings.fogColor = new Color(0.05f, 0.05f, 0.05f); // đen xám
+        RenderSettings.fogMode = FogMode.ExponentialSquared;
+        RenderSettings.fogDensity = 0.035f; // khá dày
+        Debug.Log("Đã bật sương mù...");
     }
 
     public void ChangeToBright()
