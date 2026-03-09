@@ -1,9 +1,14 @@
 ﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
+using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
+    public AudioSource voiceSource;
+    public AudioClip[] introVoices;
+    Coroutine voiceCoroutine;
+    public float textSpeedMultiplier = 0.5f;
     public static GameManager Instance;
 
     public GameObject gameOverPanel;
@@ -33,6 +38,8 @@ public class GameManager : MonoBehaviour
     private TextMeshProUGUI introTextTMP;
     private int currentIntroIndex = 0;
     private float introInputCooldown = 0.5f;
+    bool isTyping = false;
+    Coroutine typingCoroutine;
     private string[] introLines = new string[] {
         "Một buổi tối bình thường... tôi đang lướt điện thoại và đọc được hàng loạt bài viết về một \"ngôi làng du lịch sinh thái bị ma ám\".",
         "Những tin đồn nói rằng những hồ nước trong làng bị ám bởi Ma Da – những vong hồn chết đuối luôn tìm người thế mạng.",
@@ -58,6 +65,10 @@ public class GameManager : MonoBehaviour
         CreateIntroUI();
         ShowIntroLine();
         UpdateQuestUI();
+        //tắt intro tiếng thở
+        PlayerAudioManager audioManager = FindObjectOfType<PlayerAudioManager>();
+        audioManager.enabled = false;
+
     }
 
     void Update()
@@ -72,8 +83,21 @@ public class GameManager : MonoBehaviour
 
             if (Input.GetMouseButtonDown(0) || Input.anyKeyDown)
             {
+                // Nếu chữ đang chạy → hiện hết
+                if (isTyping)
+                {
+                    StopCoroutine(typingCoroutine);
+                    isTyping = false;
+
+                    introTextTMP.text = introLines[currentIntroIndex];
+
+                    return;
+                }
+
+                // Nếu chữ đã hiện xong → qua đoạn tiếp
                 currentIntroIndex++;
                 ShowIntroLine();
+
                 introInputCooldown = 0.2f;
             }
         }
@@ -131,60 +155,189 @@ public class GameManager : MonoBehaviour
     void CreateIntroUI()
     {
         introCanvasObj = new GameObject("IntroCanvas");
+
         Canvas canvas = introCanvasObj.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 9999; // Top most
-        introCanvasObj.AddComponent<UnityEngine.UI.CanvasScaler>().uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        canvas.sortingOrder = 9999;
+
+        UnityEngine.UI.CanvasScaler scaler = introCanvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
+        scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
         introCanvasObj.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+
+        // ======================
+        // FULL BLACK BACKGROUND
+        // ======================
 
         GameObject introPanel = new GameObject("IntroPanel");
         introPanel.transform.SetParent(introCanvasObj.transform, false);
+
         UnityEngine.UI.Image bg = introPanel.AddComponent<UnityEngine.UI.Image>();
-        bg.color = Color.black;
+        bg.color = new Color(0, 0, 0, 1f);
+
         RectTransform rt = introPanel.GetComponent<RectTransform>();
         rt.anchorMin = Vector2.zero;
         rt.anchorMax = Vector2.one;
         rt.sizeDelta = Vector2.zero;
 
+        // ======================
+        // TEXT PANEL (CENTER BOX)
+        // ======================
+
+        GameObject textPanel = new GameObject("TextPanel");
+        textPanel.transform.SetParent(introPanel.transform, false);
+
+        UnityEngine.UI.Image panelImg = textPanel.AddComponent<UnityEngine.UI.Image>();
+        panelImg.color = new Color(0, 0, 0, 0f); // nền mờ
+
+        RectTransform panelRT = textPanel.GetComponent<RectTransform>();
+        panelRT.anchorMin = new Vector2(0.25f, 0.4f);
+        panelRT.anchorMax = new Vector2(0.75f, 0.6f);
+        panelRT.sizeDelta = Vector2.zero;
+
+        // ======================
+        // STORY TEXT
+        // ======================
+
         GameObject textObj = new GameObject("IntroText");
-        textObj.transform.SetParent(introPanel.transform, false);
+        textObj.transform.SetParent(textPanel.transform, false);
+
         introTextTMP = textObj.AddComponent<TextMeshProUGUI>();
         introTextTMP.color = Color.white;
-        introTextTMP.fontSize = 28;
+        introTextTMP.fontSize = 52;
+        introTextTMP.lineSpacing = 20;
+        introTextTMP.margin = new Vector4(120, 80, 120, 80);
+        introTextTMP.characterSpacing = 2;
         introTextTMP.alignment = TextAlignmentOptions.Center;
         introTextTMP.enableWordWrapping = true;
 
-        RectTransform rtt = textObj.GetComponent<RectTransform>();
-        rtt.anchorMin = new Vector2(0.1f, 0.1f);
-        rtt.anchorMax = new Vector2(0.9f, 0.9f);
-        rtt.sizeDelta = Vector2.zero;
-        
-        Time.timeScale = 0f; 
-        isDialogue = true; 
-        if (madaAI != null) madaAI.enabled = false;
+        introTextTMP.lineSpacing = 10;
+        introTextTMP.margin = new Vector4(80, 60, 80, 60);
+
+        // outline chữ
+        introTextTMP.outlineWidth = 0.2f;
+        introTextTMP.outlineColor = Color.black;
+
+        RectTransform textRT = textObj.GetComponent<RectTransform>();
+        textRT.anchorMin = new Vector2(0f, 0.25f);
+        textRT.anchorMax = new Vector2(1f, 1f);
+        textRT.offsetMin = Vector2.zero;
+        textRT.offsetMax = Vector2.zero;
+
+        // ======================
+        // CLICK TO CONTINUE TEXT
+        // ======================
+
+        GameObject hint = new GameObject("HintText");
+        hint.transform.SetParent(introPanel.transform, false);
+
+        TextMeshProUGUI hintText = hint.AddComponent<TextMeshProUGUI>();
+        hintText.text = "Nhấn chuột để tiếp tục...";
+        hintText.fontSize = 26;
+        hintText.fontStyle = FontStyles.Italic;
+        hintText.alignment = TextAlignmentOptions.BottomRight;
+        hintText.color = new Color(1, 1, 1, 0.7f);
+        StartCoroutine(BlinkHint(hintText));
+
+
+        RectTransform hintRT = hint.GetComponent<RectTransform>();
+        hintRT.anchorMin = new Vector2(0.7f, 0.05f);
+        hintRT.anchorMax = new Vector2(0.98f, 0.12f);
+        hintRT.offsetMin = Vector2.zero;
+        hintRT.offsetMax = Vector2.zero;
+
+        // ======================
+        // PAUSE GAME DURING INTRO
+        // ======================
+
+        Time.timeScale = 0f;
+        isDialogue = true;
+
+        if (madaAI != null)
+            madaAI.enabled = false;
+
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
+    IEnumerator BlinkHint(TextMeshProUGUI hint)
+    {
+        while (true)
+        {
+            hint.alpha = 0.2f;
+            yield return new WaitForSecondsRealtime(0.5f);
 
+            hint.alpha = 0.8f;
+            yield return new WaitForSecondsRealtime(0.5f);
+        }
+    }
     void ShowIntroLine()
     {
         if (currentIntroIndex < introLines.Length)
         {
-            introTextTMP.text = introLines[currentIntroIndex];
+            // dừng coroutine cũ
+            if (typingCoroutine != null)
+                StopCoroutine(typingCoroutine);
+
+            if (voiceCoroutine != null)
+                StopCoroutine(voiceCoroutine);
+
+            // dừng voice cũ
+            if (voiceSource != null && voiceSource.isPlaying)
+                voiceSource.Stop();
+
+            typingCoroutine = StartCoroutine(TypeLine(introLines[currentIntroIndex]));
+
+            voiceCoroutine = StartCoroutine(PlayVoiceDelayed(0.2f));
         }
         else
         {
+            voiceSource.Stop();   // dừng voice ngay lập tức
+
             Destroy(introCanvasObj);
             introCanvasObj = null;
+
             Time.timeScale = 1f;
             isDialogue = false;
-            
+
+            PlayerAudioManager audioManager = FindObjectOfType<PlayerAudioManager>();
+            audioManager.enabled = true;
+
             AdvanceStoryState(StoryState.MeetElder);
-            
-            if (madaAI != null) madaAI.enabled = false; // Disable Mada until NightStalking
+
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
+    }
+    IEnumerator PlayVoiceDelayed(float delay)
+    {
+        yield return new WaitForSecondsRealtime(delay);
+
+        if (voiceSource != null && introVoices.Length > currentIntroIndex)
+        {
+            voiceSource.Stop();
+            voiceSource.clip = introVoices[currentIntroIndex];
+            voiceSource.Play();
+        }
+    }
+    IEnumerator TypeLine(string line)
+    {
+        isTyping = true;
+        introTextTMP.text = "";
+
+        float delay = 0.035f * textSpeedMultiplier;
+
+        foreach (char c in line)
+        {
+            introTextTMP.text += c;
+
+            if (c == '.' || c == ',' || c == '!')
+                yield return new WaitForSecondsRealtime(delay * 6);
+            else
+                yield return new WaitForSecondsRealtime(delay);
+        }
+
+        isTyping = false;
     }
 
     public void AdvanceStoryState(StoryState newState)

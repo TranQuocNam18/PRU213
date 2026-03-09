@@ -4,10 +4,14 @@ using System.Collections;
 public class PlayerMove : MonoBehaviour
 {
     [Header("Move")]
-    public float walkSpeed = 2.5f;
-    public float runSpeed = 4.5f;
+    public float walkSpeed = 5f;
+    public float runSpeed = 8f;
     public float jumpForce = 6f;
     public bool canMove = true;
+
+    [Header("Swimming")]
+    [HideInInspector]
+    public bool isSwimming = false;
 
     [Header("Ground")]
     public Transform groundCheck;
@@ -17,7 +21,7 @@ public class PlayerMove : MonoBehaviour
     [Header("Crouch")]
     public float crouchHeight = 1.0f;
 
-    [Header("Crouch Camera")]
+    [Header("Camera")]
     float originalCamHeight;
     public Transform cameraHolder;
     public float crouchCamOffset = 0.5f;
@@ -28,6 +32,10 @@ public class PlayerMove : MonoBehaviour
     public AudioSource runningAudio;
     public AudioSource breathingAudio;
     public AudioSource breathFastAudio;
+
+    [Header("Stamina")]
+    public PlayerStamina playerStamina;
+    public float staminaDrainRate = 20f;
 
     Rigidbody rb;
     Animator animator;
@@ -41,10 +49,6 @@ public class PlayerMove : MonoBehaviour
 
     float originalHeight;
     Vector3 originalCenter;
-
-    [Header("Stamina")]
-    public PlayerStamina playerStamina;
-    public float staminaDrainRate = 20f; // stamina tiêu hao mỗi giây khi sprint
 
     string currentAudioState = "";
 
@@ -74,16 +78,30 @@ public class PlayerMove : MonoBehaviour
     {
         if (!canMove) return;
 
-        // ===== INPUT =====
         h = Input.GetAxis("Horizontal");
         v = Input.GetAxis("Vertical");
 
         float speedValue = new Vector2(h, v).magnitude;
+
+        // ===== SWIMMING =====
+        if (isSwimming)
+        {
+            animator.SetBool("isSwimming", true);
+            animator.SetFloat("SwimSpeed", speedValue);
+
+            StopAllMoveAudio();
+        }
+        else
+        {
+            animator.SetBool("isSwimming", false);
+        }
+
         animator.SetFloat("Speed", speedValue);
 
-        // ===== SPRINT =====
-        bool wantSprint = Input.GetKey(KeyCode.LeftShift) && speedValue > 0.1f && !isCrouch;
+        // ===== SPRINT WITH STAMINA =====
+        bool wantSprint = Input.GetKey(KeyCode.LeftShift) && speedValue > 0.1f && !isCrouch && !isSwimming;
         bool canRun = playerStamina == null || playerStamina.CanRun();
+
         isSprint = wantSprint && canRun;
 
         if (isSprint && playerStamina != null)
@@ -108,29 +126,33 @@ public class PlayerMove : MonoBehaviour
 
         animator.SetBool("isGrounded", isGrounded);
 
+        // ===== CAMERA CROUCH =====
         float targetY = isCrouch
-        ? originalCamHeight - crouchCamOffset
-        : originalCamHeight;
+            ? originalCamHeight - crouchCamOffset
+            : originalCamHeight;
 
         Vector3 camPos = cameraHolder.localPosition;
         camPos.y = Mathf.Lerp(camPos.y, targetY, Time.deltaTime * camLerpSpeed);
         cameraHolder.localPosition = camPos;
 
-        // ===== AUDIO STATE =====
-        if (speedValue < 0.1f)
+        // ===== AUDIO =====
+        if (!isSwimming)
         {
-            PlayStateSound("idle");
-        }
-        else if (isSprint)
-        {
-            PlayStateSound("run");
-        }
-        else
-        {
-            PlayStateSound("walk");
+            if (speedValue < 0.1f)
+            {
+                PlayStateSound("idle");
+            }
+            else if (isSprint)
+            {
+                PlayStateSound("run");
+            }
+            else
+            {
+                PlayStateSound("walk");
+            }
         }
 
-        // ===== COUNT RUN LOOPS =====
+        // ===== RUN LOOP COUNT =====
         if (currentAudioState == "run" && runningAudio.isPlaying)
         {
             if (runningAudio.time < lastRunTime)
@@ -142,7 +164,7 @@ public class PlayerMove : MonoBehaviour
         }
 
         // ===== JUMP =====
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isCrouch)
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isCrouch && !isSwimming)
         {
             jumpRequest = true;
             animator.SetTrigger("Jump");
@@ -152,6 +174,8 @@ public class PlayerMove : MonoBehaviour
     void FixedUpdate()
     {
         if (!canMove) return;
+
+        if (isSwimming) return;
 
         float speed = isSprint ? runSpeed : walkSpeed;
 
@@ -200,6 +224,14 @@ public class PlayerMove : MonoBehaviour
         }
     }
 
+    void StopAllMoveAudio()
+    {
+        walkingAudio.Stop();
+        runningAudio.Stop();
+        breathingAudio.Stop();
+        breathFastAudio.Stop();
+    }
+
     void PlayStateSound(string state)
     {
         if (currentAudioState == state) return;
@@ -232,7 +264,7 @@ public class PlayerMove : MonoBehaviour
             walkingAudio.Stop();
             runningAudio.Stop();
 
-            if (runLoopCount >= 3 && !breathFastPlaying)
+            if ((runLoopCount >= 3 || (playerStamina != null && !playerStamina.CanRun())) && !breathFastPlaying)
             {
                 StartCoroutine(PlayBreathFast());
             }

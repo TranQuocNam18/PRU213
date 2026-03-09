@@ -6,7 +6,7 @@ public class PlayerAudioManager : MonoBehaviour
     public AudioSource running;
     public AudioSource breathing;
 
-    void StopAllMovementSound()
+    public void StopAllMovementSound()
     {
         walking.Stop();
         running.Stop();

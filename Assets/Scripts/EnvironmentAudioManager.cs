@@ -17,7 +17,7 @@ public class EnvironmentAudioManager : MonoBehaviour
 
     void Start()
     {
-        natureAudio.Play();
+        natureAudio.Stop();
     }
 
     void Update()
@@ -60,6 +60,10 @@ public class EnvironmentAudioManager : MonoBehaviour
 
         yield return new WaitForSeconds(delayTime);
 
+        natureAudio.Play();
+    }
+    public void StartNatureAudio()
+    {
         natureAudio.Play();
     }
 }
