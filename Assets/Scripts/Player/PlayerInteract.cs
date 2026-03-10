@@ -7,6 +7,18 @@ public class PlayerInteract : MonoBehaviour
     public GameObject interactText;
     public Camera playerCamera;
 
+    private TextMeshProUGUI interactTMP;
+
+    void Start()
+    {
+        if (interactText != null)
+        {
+            // Thử lấy TMP trực tiếp, nếu không có thì tìm trong children
+            interactTMP = interactText.GetComponent<TextMeshProUGUI>();
+            if (interactTMP == null)
+                interactTMP = interactText.GetComponentInChildren<TextMeshProUGUI>();
+        }
+    }
     void Update()
     {
         if (playerCamera == null) return;
@@ -28,7 +40,8 @@ public class PlayerInteract : MonoBehaviour
             if (monk != null || elder != null)
             {
                 interactText.SetActive(true);
-                interactText.GetComponent<TextMeshProUGUI>().text = "Nói chuyện [F]";
+                if (interactTMP != null)
+                    interactTMP.text = "Nói chuyện [F]";
                 return;
             }
 

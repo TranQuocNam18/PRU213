@@ -38,7 +38,7 @@ public class TalismanCompass : MonoBehaviour
     [Tooltip("Một nửa chiều rộng hiển thị compass (pixel). Bằng width/2 của CompassBar")]
     public float compassHalfWidth = 330f;
 
-    [Tooltip("Khoảng cách tối đa hiển thị trên compass (Unity units). Quá xa hơn sẽ không hiện)")]
+    [Tooltip("Khoảng cách tham chiếu để tính alpha icon (Unity units). Xa hơn sẽ mờ hơn nhưng vẫn hiện)")]
     public float maxDetectionRange = 200f;
 
     // Danh sách talisman đang theo dõi
@@ -80,7 +80,6 @@ public class TalismanCompass : MonoBehaviour
         if (GameManager.Instance == null) return;
 
         var state = GameManager.Instance.currentState;
-
         if (state == GameManager.StoryState.Intro || state == GameManager.StoryState.MeetElder || state == GameManager.StoryState.NightStalking)
         {
             ElderNPC elder = FindObjectOfType<ElderNPC>();
@@ -173,8 +172,8 @@ public class TalismanCompass : MonoBehaviour
             float normalizedAngle = angleDelta / 180f; // -1..+1
             float posX = normalizedAngle * compassHalfWidth;
 
-            // Chỉ hiện nếu nằm trong tầm compass và trong maxDetectionRange
-            bool inView = Mathf.Abs(posX) <= compassHalfWidth && distance <= maxDetectionRange;
+            // Luôn hiện marker dù bùa/NPC ở bất kỳ khoảng cách nào
+            bool inView = true;
             entry.markerRect.gameObject.SetActive(inView);
 
             if (inView)
@@ -185,10 +184,10 @@ public class TalismanCompass : MonoBehaviour
                 if (entry.distText != null)
                     entry.distText.text = Mathf.RoundToInt(distance) + "m";
 
-                // Màu sắc theo khoảng cách: gần = vàng sáng, xa = vàng mờ
+                // Màu sắc theo khoảng cách: gần = vàng sáng, xa = vàng mờ hơn (min 0.3f)
                 if (entry.iconImage != null)
                 {
-                    float alpha = Mathf.Lerp(1f, 0.4f, distance / maxDetectionRange);
+                    float alpha = Mathf.Lerp(1f, 0.3f, Mathf.Clamp01(distance / maxDetectionRange));
                     entry.iconImage.color = new Color(1f, 0.9f, 0.2f, alpha);
                 }
             }
@@ -202,7 +201,7 @@ public class TalismanCompass : MonoBehaviour
     {
         if (compassBar == null) return;
 
-        bool showCompass = GameManager.Instance != null && 
+        bool showCompass = GameManager.Instance != null &&
                            GameManager.Instance.currentState >= GameManager.StoryState.Intro &&
                            GameManager.Instance.currentState < GameManager.StoryState.Minigame;
 
