@@ -11,6 +11,12 @@ public class PlayerInteract : MonoBehaviour
     {
         if (playerCamera == null) return;
 
+        if (SealingMinigame.Instance != null && SealingMinigame.Instance.isPlaying)
+        {
+            if (interactText != null) interactText.SetActive(false);
+            return;
+        }
+
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
         RaycastHit hit;
 
