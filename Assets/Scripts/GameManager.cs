@@ -3,13 +3,14 @@ using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
 
+// Quản lý chính của game, xử lý luồng cốt truyền và trạng thái trò chơi
 public class GameManager : MonoBehaviour
 {
     public AudioSource voiceSource;
     public AudioClip[] introVoices;
     Coroutine voiceCoroutine;
     public float textSpeedMultiplier = 0.5f;
-    public static GameManager Instance;
+    public static GameManager Instance; // Singleton instance để truy cập từ mọi nơi
 
     public GameObject gameOverPanel;
     public MadaFollowerAI madaAI;
@@ -48,6 +49,7 @@ public class GameManager : MonoBehaviour
         "Tôi sẽ là người chứng minh tất cả chỉ là tin đồn."
     };
 
+    // Khởi tạo Singleton khi game load
     void Awake()
     {
         if (Instance == null)
@@ -60,6 +62,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Thiết lập ban đầu khi bắt đầu màn chơi
     void Start()
     {
         gameOverPanel.SetActive(false);
