@@ -8,8 +8,8 @@ public class MadaFollowerAI : MonoBehaviour
     public Transform player;
     public Rigidbody playerRb;
 
-    [Header("Water State")]
-    private bool playerInWaterZone = false;
+    [Header("Environment State")]
+    private bool isInWaterZone = false;
 
     [Header("Movement")]
     public float moveSpeed = 1.8f;
@@ -37,6 +37,10 @@ public class MadaFollowerAI : MonoBehaviour
     public float attackDuration = 0.6f;
 
 
+    [Header("Audio")]
+    public AudioClip wetFootstepsSound;
+    private AudioSource footstepsSource;
+
     Rigidbody rb;
     Animator animator;
     Renderer[] renderers;
@@ -59,6 +63,11 @@ public class MadaFollowerAI : MonoBehaviour
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
 
+        footstepsSource = gameObject.AddComponent<AudioSource>();
+        footstepsSource.clip = wetFootstepsSound;
+        footstepsSource.loop = true;
+        footstepsSource.spatialBlend = 1f;
+
         HideInstant();
     }
 
@@ -71,19 +80,37 @@ public class MadaFollowerAI : MonoBehaviour
         }
         if (!player || isAttacking) return;
 
-        // Nếu player không ở vùng nước → ẩn luôn
-        if (!playerInWaterZone)
+        bool storyAllowsStalking = GameManager.Instance != null && GameManager.Instance.currentState >= GameManager.StoryState.NightStalking && GameManager.Instance.currentState != GameManager.StoryState.Win;
+
+        if (!isInWaterZone && !storyAllowsStalking)
         {
             HideInstant();
             return;
         }
+
+        // Tự động scale độ khó dựa trên số bùa
+        int collected = 0;
+        if (ObjectiveManager.Instance != null)
+        {
+            collected = ObjectiveManager.Instance.collectedTalismans;
+        }
+
+        // Độ khó cơ bản + bonus mỗi bùa
+        float currentAppearDelay = Mathf.Max(1f, appearDelay - (collected * 1.0f)); // Delay ngắn lại
+        float currentDisappearTime = Mathf.Max(0.5f, disappearTime - (collected * 0.3f)); // Nhìn nhanh biến mất hơn (nếu dã tâm cao thì nên lâu biến mất hơn? Không, khó hơn nghĩa là nó lén lút nhanh hơn, hoặc dai dẳng hơn. Ở đây khó hơn = biến mất MUỘN hơn để áp sát, nhưng vì mechanics ban đầu là disappearTime. Nếu nó biến đi thì an toàn. Vậy thì biến mất LÂU HƠN = khó hơn)
+        // Wait, the longer it takes to disappear, the scarier it is because it chases you longer while you look at it?
+        // Actually, player looking at it causes it to disappear. "if (lookTimer >= disappearTime)... Hide()"
+        // So a longer disappearTime means the player has to stare at it longer to make it go away. That is harder.
+        currentDisappearTime = disappearTime + (collected * 0.4f);
+
+        float currentMoveSpeed = moveSpeed + (collected * 0.4f); // Chạy nhanh hơn
 
         appearTimer += Time.deltaTime;
 
         // ===== Chưa xuất hiện =====
         if (!isVisible)
         {
-            if (appearTimer >= appearDelay)
+            if (appearTimer >= currentAppearDelay)
             {
                 TeleportBehindPlayer();
                 Show();
@@ -101,7 +128,7 @@ public class MadaFollowerAI : MonoBehaviour
                 lookTimer += Time.deltaTime;
                 SetAnim(false, false);
 
-                if (lookTimer >= disappearTime)
+                if (lookTimer >= currentDisappearTime)
                 {
                     Hide();
                 }
@@ -119,9 +146,9 @@ public class MadaFollowerAI : MonoBehaviour
     // ================= WATER SIGNAL =================
     public void SetPlayerInWater(bool value)
     {
-        playerInWaterZone = value;
+        isInWaterZone = value;
 
-        if (!value)
+        if (!value && GameManager.Instance != null && GameManager.Instance.currentState < GameManager.StoryState.NightStalking)
             HideInstant();
     }
 
@@ -132,15 +159,33 @@ public class MadaFollowerAI : MonoBehaviour
         target.y = transform.position.y;
 
         Vector3 dir = target - transform.position;
-        float dist = dir.magnitude;
+        
+        float horizontalDist = dir.magnitude;
+        float verticalDist = Mathf.Abs(transform.position.y - player.position.y);
 
-        if (dist <= attackDistance)
+        if (horizontalDist <= attackDistance && verticalDist <= 2.5f)
         {
-            StartCoroutine(Jumpscare());
+            if (GameManager.Instance != null && GameManager.Instance.currentState == GameManager.StoryState.NightStalking)
+            {
+                // Chỉ dọa rồi biến mất chứ không giết
+                if (jumpscareSound != null) jumpscareSound.Play();
+                Hide();
+            }
+            else
+            {
+                StartCoroutine(Jumpscare());
+            }
             return;
         }
 
-        Vector3 move = dir.normalized * moveSpeed * Time.deltaTime;
+        int collected = 0;
+        if (ObjectiveManager.Instance != null)
+        {
+            collected = ObjectiveManager.Instance.collectedTalismans;
+        }
+        float currentMoveSpeed = moveSpeed + (collected * 0.4f); // Update speed
+        
+        Vector3 move = dir.normalized * currentMoveSpeed * Time.deltaTime;
         rb.MovePosition(rb.position + move);
 
         if (dir.sqrMagnitude > 0.01f)
@@ -167,22 +212,21 @@ public class MadaFollowerAI : MonoBehaviour
     // ================= TELEPORT =================
     void TeleportBehindPlayer()
     {
-        Vector3 backDir = -player.forward;
-        backDir.y = 0;
-        backDir.Normalize();
+        // Spawns behind the player
+        Vector3 spawnDir = -player.forward;
+        spawnDir.y = 0;
+        spawnDir.Normalize();
 
-        Vector3 targetPos = player.position + backDir * followDistance;
+        Vector3 targetPos = player.position + spawnDir * followDistance;
 
         RaycastHit hit;
 
-        // Raycast từ trên xuống để tìm mặt đất
         if (Physics.Raycast(targetPos + Vector3.up * 10f, Vector3.down, out hit, 50f))
         {
             rb.position = hit.point + Vector3.up * 0.1f;
         }
         else
         {
-            // Nếu không tìm được đất → đặt ngang player
             rb.position = new Vector3(targetPos.x, player.position.y, targetPos.z);
         }
 
@@ -258,9 +302,15 @@ public class MadaFollowerAI : MonoBehaviour
             timer += Time.deltaTime;
             yield return null;
         }
-        
-        if (gameOverUI)
+        // Gọi GameOver thông qua GameManager để tự động ẩn các panel khác (máu, la bàn...)
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.GameOver();
+        }
+        else if (gameOverUI)
+        {
             gameOverUI.SetActive(true);
+        }
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -291,6 +341,7 @@ public class MadaFollowerAI : MonoBehaviour
         foreach (var c in colliders) c.enabled = false;
 
         rb.isKinematic = true;
+        if (footstepsSource != null) footstepsSource.Stop();
     }
 
     void HideInstant()
@@ -302,6 +353,7 @@ public class MadaFollowerAI : MonoBehaviour
         foreach (var c in colliders) c.enabled = false;
 
         rb.isKinematic = true;
+        if (footstepsSource != null) footstepsSource.Stop();
     }
 
     void Show()
@@ -312,6 +364,7 @@ public class MadaFollowerAI : MonoBehaviour
         foreach (var c in colliders) c.enabled = true;
 
         rb.isKinematic = false;
+        if (footstepsSource != null) footstepsSource.Play();
 
         SetAnim(true, false);
     }

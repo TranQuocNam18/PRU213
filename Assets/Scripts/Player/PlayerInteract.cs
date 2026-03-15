@@ -4,37 +4,44 @@ using TMPro;
 public class PlayerInteract : MonoBehaviour
 {
     public float interactDistance = 3f;
-
     public GameObject interactText;
+    public Camera playerCamera;
 
-    public Camera playerCamera; // camera player
+    private TextMeshProUGUI interactTMP;
 
+    void Start()
+    {
+        if (interactText != null)
+        {
+            // Thử lấy TMP trực tiếp, nếu không có thì tìm trong children
+            interactTMP = interactText.GetComponent<TextMeshProUGUI>();
+            if (interactTMP == null)
+                interactTMP = interactText.GetComponentInChildren<TextMeshProUGUI>();
+        }
+    }
     void Update()
     {
         if (playerCamera == null) return;
+
+        if (SealingMinigame.Instance != null && SealingMinigame.Instance.isPlaying)
+        {
+            if (interactText != null) interactText.SetActive(false);
+            return;
+        }
 
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
         RaycastHit hit;
 
         if (Physics.Raycast(ray, out hit, interactDistance))
         {
-            NoteInteraction note = hit.collider.GetComponent<NoteInteraction>();
+            MonkNPC monk = hit.collider.GetComponentInParent<MonkNPC>();
+            ElderNPC elder = hit.collider.GetComponentInParent<ElderNPC>();
 
-            if (note != null)
+            if (monk != null || elder != null)
             {
                 interactText.SetActive(true);
-                interactText.GetComponent<TextMeshProUGUI>().text = "Đọc [F]";
-                return;
-            }
-
-            interactText.SetActive(false);
-
-            MonkNPC monk = hit.collider.GetComponent<MonkNPC>();
-
-            if (monk != null)
-            {
-                interactText.SetActive(true);
-                interactText.GetComponent<TextMeshProUGUI>().text = "Nói chuyện [F]";
+                if (interactTMP != null)
+                    interactTMP.text = "Nói chuyện [F]";
                 return;
             }
 

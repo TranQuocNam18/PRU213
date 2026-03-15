@@ -3,8 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Compass HUD - hiển thị hướng đến từng talisman còn lại trên thanh compass nằm ngang.
+/// Compass HUD - hiển thị hướng đến từng talisman hoặc NPC còn lại trên thanh compass nằm ngang.
 /// 
 /// === SETUP TRONG UNITY EDITOR ===
 /// 1. Tạo Canvas (Screen Space - Overlay, Sort Order 10)
@@ -39,7 +38,7 @@ public class TalismanCompass : MonoBehaviour
     [Tooltip("Một nửa chiều rộng hiển thị compass (pixel). Bằng width/2 của CompassBar")]
     public float compassHalfWidth = 330f;
 
-    [Tooltip("Khoảng cách tối đa hiển thị trên compass (Unity units). Quá xa hơn sẽ không hiện)")]
+    [Tooltip("Khoảng cách tham chiếu để tính alpha icon (Unity units). Xa hơn sẽ mờ hơn nhưng vẫn hiện)")]
     public float maxDetectionRange = 200f;
 
     // Danh sách talisman đang theo dõi
@@ -53,18 +52,52 @@ public class TalismanCompass : MonoBehaviour
         public TextMeshProUGUI distText;
     }
 
+    public static TalismanCompass Instance;
+
+    void Awake()
+    {
+        if (Instance == null) Instance = this;
+    }
+
     void Start()
     {
-        // Tự động đăng ký tất cả talisman trong scene
-        Talisman[] allTalismans = FindObjectsByType<Talisman>(FindObjectsSortMode.None);
+        // Tự động đăng ký tất cả hiển thị ban đầu
+        UpdateWaypoints();
 
-        foreach (Talisman t in allTalismans)
-        {
-            RegisterTalisman(t.transform);
-        }
-
-        // Nếu chưa bắt đầu objective thì ẩn compass
+        // Nếu chưa bắt đầu objective thì vẫn hiện compass cho NPC
         UpdateCompassVisibility();
+    }
+
+    public void UpdateWaypoints()
+    {
+        // Clear old waypoints
+        foreach (var entry in entries)
+        {
+            if (entry.markerRect != null) Destroy(entry.markerRect.gameObject);
+        }
+        entries.Clear();
+
+        if (GameManager.Instance == null) return;
+
+        var state = GameManager.Instance.currentState;
+        if (state == GameManager.StoryState.Intro || state == GameManager.StoryState.MeetElder || state == GameManager.StoryState.NightStalking)
+        {
+            ElderNPC elder = FindObjectOfType<ElderNPC>();
+            if (elder != null) RegisterTalisman(elder.transform);
+        }
+        else if (state == GameManager.StoryState.MeetMonk || state == GameManager.StoryState.ReturnMonk)
+        {
+            MonkNPC monk = FindObjectOfType<MonkNPC>();
+            if (monk != null) RegisterTalisman(monk.transform);
+        }
+        else if (state == GameManager.StoryState.SearchTalismans)
+        {
+            Talisman[] allTalismans = FindObjectsByType<Talisman>(FindObjectsSortMode.None);
+            foreach (Talisman t in allTalismans)
+            {
+                RegisterTalisman(t.transform);
+            }
+        }
     }
 
     /// <summary>
@@ -139,8 +172,8 @@ public class TalismanCompass : MonoBehaviour
             float normalizedAngle = angleDelta / 180f; // -1..+1
             float posX = normalizedAngle * compassHalfWidth;
 
-            // Chỉ hiện nếu nằm trong tầm compass và trong maxDetectionRange
-            bool inView = Mathf.Abs(posX) <= compassHalfWidth && distance <= maxDetectionRange;
+            // Luôn hiện marker dù bùa/NPC ở bất kỳ khoảng cách nào
+            bool inView = true;
             entry.markerRect.gameObject.SetActive(inView);
 
             if (inView)
@@ -151,10 +184,10 @@ public class TalismanCompass : MonoBehaviour
                 if (entry.distText != null)
                     entry.distText.text = Mathf.RoundToInt(distance) + "m";
 
-                // Màu sắc theo khoảng cách: gần = vàng sáng, xa = vàng mờ
+                // Màu sắc theo khoảng cách: gần = vàng sáng, xa = vàng mờ hơn (min 0.3f)
                 if (entry.iconImage != null)
                 {
-                    float alpha = Mathf.Lerp(1f, 0.4f, distance / maxDetectionRange);
+                    float alpha = Mathf.Lerp(1f, 0.3f, Mathf.Clamp01(distance / maxDetectionRange));
                     entry.iconImage.color = new Color(1f, 0.9f, 0.2f, alpha);
                 }
             }
@@ -168,10 +201,10 @@ public class TalismanCompass : MonoBehaviour
     {
         if (compassBar == null) return;
 
-        bool objectiveActive = ObjectiveManager.Instance != null &&
-                               ObjectiveManager.Instance.objectiveStarted &&
-                               !ObjectiveManager.Instance.objectiveCompleted;
+        bool showCompass = GameManager.Instance != null &&
+                           GameManager.Instance.currentState >= GameManager.StoryState.Intro &&
+                           GameManager.Instance.currentState < GameManager.StoryState.Minigame;
 
-        compassBar.gameObject.SetActive(objectiveActive);
+        compassBar.gameObject.SetActive(showCompass);
     }
 }

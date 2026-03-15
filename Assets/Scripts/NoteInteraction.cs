@@ -12,11 +12,12 @@ public class NoteInteraction : MonoBehaviour
     {
         if (playerInRange && Input.GetKeyDown(KeyCode.F) && !hasRead)
         {
+            Input.ResetInputAxes();
             ReadNote();
         }
     }
 
-    void ReadNote()
+    public void ReadNote()
     {
         hasRead = true;
 
