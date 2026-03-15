@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 
+// Quản lý hệ thống hội thoại (dialogue) trong trò chơi
 public class DialogueManager : MonoBehaviour
 {
     public static DialogueManager Instance;
@@ -21,11 +22,13 @@ public class DialogueManager : MonoBehaviour
     private int index = 0;
     private float nextLineCooldown = 0f;
 
+    // Khởi tạo Singleton
     void Awake()
     {
         Instance = this;
     }
 
+    // Cập nhật trạng thái và nhận input chuyển câu thoại
     void Update()
     {
         if (Instance != this) return;
@@ -117,6 +120,7 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
+    // Chuyển sang dòng hội thoại tiếp theo
     public void NextLine()
     {
         index++;
