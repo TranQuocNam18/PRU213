@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
@@ -69,6 +69,12 @@ public class GameManager : MonoBehaviour
         PlayerAudioManager audioManager = FindObjectOfType<PlayerAudioManager>();
         audioManager.enabled = false;
 
+        // Tự động thêm GuideWispSpawner
+        if (GuideWispSpawner.Instance == null)
+        {
+            GameObject spawnerObj = new GameObject("GuideWispSpawner");
+            spawnerObj.AddComponent<GuideWispSpawner>();
+        }
     }
 
     void Update()
@@ -105,31 +111,21 @@ public class GameManager : MonoBehaviour
 
     public void UpdateQuestUI()
     {
-        TalismanUI ui = TalismanUI.Instance;
-        if (ui == null || ui.talismanText == null) return;
-
-        // Kích hoạt lại GameObject và toàn bộ chuỗi cha của nó
-        ui.gameObject.SetActive(true);
-        Transform parent = ui.transform.parent;
-        while (parent != null)
-        {
-            parent.gameObject.SetActive(true);
-            parent = parent.parent;
-        }
+        string questString = "";
 
         switch (currentState)
         {
             case StoryState.Intro:
-                ui.talismanText.text = "Đi nói chuyện với trưởng làng";
+                questString = "Đi nói chuyện với trưởng làng";
                 break;
             case StoryState.MeetElder:
-                ui.talismanText.text = "Nói chuyện với trưởng làng";
+                questString = "Nói chuyện với trưởng làng";
                 break;
             case StoryState.MeetMonk:
-                ui.talismanText.text = "Đi đến Nhà sư";
+                questString = "Đi đến Nhà sư";
                 break;
             case StoryState.NightStalking:
-                ui.talismanText.text = "Đi về làng nói chuyện trưởng làng";
+                questString = "Đi về làng nói chuyện trưởng làng";
                 break;
             case StoryState.SearchTalismans:
                 int count = 0;
@@ -139,16 +135,49 @@ public class GameManager : MonoBehaviour
                     count = ObjectiveManager.Instance.collectedTalismans;
                     total = ObjectiveManager.Instance.totalTalismans;
                 }
-                ui.talismanText.text = $"Tìm {total} lá bùa ({count}/{total})";
+                questString = $"Tìm {total} lá bùa ({count}/{total})";
                 break;
             case StoryState.ReturnMonk:
-                ui.talismanText.text = "Quay lại gặp Nhà sư";
+                questString = "Quay lại gặp Nhà sư";
                 break;
             case StoryState.Minigame:
             case StoryState.Win:
-                ui.talismanText.text = "";
-                ui.gameObject.SetActive(false);
+                questString = "";
                 break;
+        }
+
+        TalismanUI ui = TalismanUI.Instance;
+        if (ui != null && ui.talismanText != null)
+        {
+            ui.talismanText.text = questString;
+            
+            if (questString != "")
+            {
+                ui.gameObject.SetActive(true);
+                Transform parent = ui.transform.parent;
+                while (parent != null)
+                {
+                    parent.gameObject.SetActive(true);
+                    parent = parent.parent;
+                }
+            }
+            else
+            {
+                ui.gameObject.SetActive(false);
+            }
+        }
+
+        // Cập nhật lên UI Trượt
+        if (QuestPanelController.Instance == null)
+        {
+            // Tự động tạo nếu chưa có
+            GameObject questPanelObj = new GameObject("QuestPanelController");
+            questPanelObj.AddComponent<QuestPanelController>();
+        }
+        
+        if (QuestPanelController.Instance != null)
+        {
+            QuestPanelController.Instance.ShowQuest(questString);
         }
     }
 
