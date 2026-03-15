@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using TMPro;
 
 public class DialogueManager : MonoBehaviour
@@ -43,9 +43,10 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
+    // Bắt đầu chuỗi hội thoại mới
     public void StartDialogue(string[] dialogueLines)
     {
-        // tránh lỗi nếu mảng rỗng
+        // Tránh lỗi nếu mảng hội thoại rỗng
         if (dialogueLines == null || dialogueLines.Length == 0)
         {
             Debug.LogError("Dialogue lines is empty!");
@@ -55,19 +56,22 @@ public class DialogueManager : MonoBehaviour
         lines = dialogueLines;
         index = 0;
 
+        // Hiển thị Panel và bắt đầu dòng đầu tiên
         dialoguePanel.SetActive(true);
         DisplayLine(lines[index]);
         
         isTalking = true;
         nextLineCooldown = 0.2f;
 
+        // Thông báo cho GameManager rằng đang trong hội thoại (để dừng game/AI)
         if (GameManager.Instance != null)
             GameManager.Instance.StartDialogue();
     }
 
+    // Hiển thị nội dung của một dòng hội thoại, bao gồm tên người nói
     private void DisplayLine(string line)
     {
-        // Tắt tất cả tên nhân vật trước
+        // Tắt tất cả các nhãn tên nhân vật trước khi kiểm tra người nói
         if (textMonk != null) textMonk.gameObject.SetActive(false);
         if (textElder != null) textElder.gameObject.SetActive(false);
         if (textPlayer != null) textPlayer.gameObject.SetActive(false);
@@ -77,6 +81,7 @@ public class DialogueManager : MonoBehaviour
 
         string contentString = line; // Lời thoại cuối cùng để hiện ra
 
+        // Kiểm tra tiền tố để xác định ai đang nói và hiển thị nhãn tên tương ứng
         if (line.StartsWith("Nhà sư:"))
         {
             if (textMonk != null)
@@ -105,6 +110,7 @@ public class DialogueManager : MonoBehaviour
             contentString = line.Substring("Tôi:".Length).Trim();
         }
 
+        // Cập nhật nội dung lời thoại vào text component
         if (dialogueText != null)
         {
             dialogueText.text = contentString;
@@ -125,6 +131,7 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
+    // Kết thúc chuỗi hội thoại và trả lại quyền điều khiển
     public void EndDialogue()
     {
         dialoguePanel.SetActive(false);
@@ -133,7 +140,7 @@ public class DialogueManager : MonoBehaviour
             GameManager.Instance.EndDialogue();
         isTalking = false;
 
-        // reset trạng thái NPC
+        // Reset trạng thái tương tác của các NPC để họ có thể nói chuyện lại
         MonkNPC monk = FindObjectOfType<MonkNPC>();
         if (monk != null)
         {

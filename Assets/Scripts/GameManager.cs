@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
@@ -21,16 +21,17 @@ public class GameManager : MonoBehaviour
     public bool isGameOver = false;
     public bool isDialogue = false; // thêm trạng thái hội thoại
 
+    // Các giai đoạn chính của cốt truyện
     public enum StoryState
     {
-        Intro,
-        MeetElder,
-        MeetMonk,
-        NightStalking,
-        SearchTalismans,
-        ReturnMonk,
-        Minigame,
-        Win
+        Intro,           // Cảnh giới thiệu mở đầu
+        MeetElder,       // Gặp Trưởng làng lần đầu
+        MeetMonk,        // Gặp Sư thầy
+        NightStalking,   // Giai đoạn bị theo dõi buổi đêm
+        SearchTalismans, // Tìm kiếm các lá bùa
+        ReturnMonk,      // Quay lại gặp Sư thầy sau khi có bùa
+        Minigame,        // Giai đoạn thực hiện minigame phong ấn
+        Win              // Kết thúc màn chơi (Thắng)
     }
     public StoryState currentState = StoryState.Intro;
 
@@ -103,12 +104,13 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Cập nhật nội dung Quest (nhiệm vụ) trên UI dựa theo StoryState hiện tại
     public void UpdateQuestUI()
     {
         TalismanUI ui = TalismanUI.Instance;
         if (ui == null || ui.talismanText == null) return;
 
-        // Kích hoạt lại GameObject và toàn bộ chuỗi cha của nó
+        // Đảm bảo UI nhiệm vụ luôn hiển thị khi cần thiết
         ui.gameObject.SetActive(true);
         Transform parent = ui.transform.parent;
         while (parent != null)
@@ -117,6 +119,7 @@ public class GameManager : MonoBehaviour
             parent = parent.parent;
         }
 
+        // Thay đổi nội dung text dựa trên trạng thái game
         switch (currentState)
         {
             case StoryState.Intro:
@@ -340,6 +343,7 @@ public class GameManager : MonoBehaviour
         isTyping = false;
     }
 
+    // Chuyển sang trạng thái cốt truyện mới và kích hoạt các hiệu ứng môi trường/AI tương ứng
     public void AdvanceStoryState(StoryState newState)
     {
         currentState = newState;
@@ -347,17 +351,20 @@ public class GameManager : MonoBehaviour
 
         UpdateQuestUI();
 
+        // Cập nhật la bàn chỉ hướng
         if (TalismanCompass.Instance != null)
         {
             TalismanCompass.Instance.UpdateWaypoints();
         }
 
+        // Xử lý các sự kiện đặc biệt khi chuyển state
         if (newState == StoryState.NightStalking)
         {
+            // Chuyển trời tối
             if (SkyManager.Instance != null)
                 SkyManager.Instance.ChangeToDark();
             
-            // Enable sound effects for footstep behind player or enable MadaAI stalker mode
+            // Kích hoạt AI Ma Da bám đuôi người chơi
             if (madaAI != null)
             {
                 madaAI.enabled = true;
@@ -366,6 +373,7 @@ public class GameManager : MonoBehaviour
         }
         else if (newState == StoryState.SearchTalismans)
         {
+            // Kích hoạt sương mù khi đi tìm bùa
             if (SkyManager.Instance != null)
                 SkyManager.Instance.EnableFog();
         }
@@ -375,18 +383,19 @@ public class GameManager : MonoBehaviour
     // GAME OVER
     // ==============================
 
+    // Xử lý khi người chơi chết (Game Over)
     public void GameOver()
     {
         isGameOver = true;
 
-    // Tắt các UI trong mảng otherUIPanels để chắc chắn (nếu có)
+    // Tắt các UI trong mảng otherUIPanels
     foreach (GameObject ui in otherUIPanels)
     {
         if (ui != null)
             ui.SetActive(false);
     }
         
-    // Tắt tất cả các Canvas khác trong Scene không chứa gameOverPanel
+    // Tìm và tắt tất cả các Canvas khác để tránh đè UI lên panel GameOver
     Canvas[] allCanvases = FindObjectsOfType<Canvas>();
     foreach (Canvas c in allCanvases)
     {
@@ -396,7 +405,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // Tắt tất cả các UI con trong Canvas chứa gameOverPanel, ngoại trừ nhánh chứa gameOverPanel
+    // Tắt các UI con cùng cấp với gameOverPanel
     Canvas mainCanvas = gameOverPanel.GetComponentInParent<Canvas>();
     if (mainCanvas != null)
     {
@@ -409,10 +418,11 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Hiển thị Panel Game Over và dừng thời gian
     gameOverPanel.SetActive(true);
-
     Time.timeScale = 0f;
 
+    // Hiện chuột để người chơi tương tác với nút bấm
     Cursor.lockState = CursorLockMode.None;
     Cursor.visible = true;
 }

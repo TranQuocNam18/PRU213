@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class PlayerSwimming : MonoBehaviour
 {
@@ -34,44 +34,48 @@ public class PlayerSwimming : MonoBehaviour
 
         float y = transform.position.y;
 
-        // ===== BUOYANCY =====
+        // ===== LỰC ĐẨY (BUOYANCY) =====
+        // Nếu người chơi ở dưới mặt nước, áp dụng lực đẩy hướng lên để nổi
         if (y < waterSurfaceY)
         {
             rb.AddForce(Vector3.up * buoyancyForce, ForceMode.Acceleration);
         }
 
-        // ===== SWIM UP =====
+        // ===== BƠI LÊN (SWIM UP) =====
         if (Input.GetKey(KeyCode.Space))
         {
             rb.AddForce(Vector3.up * swimUpSpeed, ForceMode.Acceleration);
         }
 
-        // ===== DIVE =====
+        // ===== LẶN XUỐNG (DIVE) =====
         if (Input.GetKey(KeyCode.LeftControl))
         {
             rb.AddForce(Vector3.down * swimUpSpeed, ForceMode.Acceleration);
         }
 
-        // ===== FORWARD SWIM =====
+        // ===== TỐC ĐỘ BƠI VỀ PHÍA TRƯỚC =====
         float speed = swimForwardSpeed;
 
+        // Xử lý bơi nhanh (Sprinting)
         if (Input.GetKey(KeyCode.LeftShift))
         {
             speed *= sprintMultiplier;
 
             if (animator != null)
-                animator.speed = 3f;
+                animator.speed = 3f; // Tăng tốc độ animation bơi
         }
         else
         {
             if (animator != null)
-                animator.speed = 1.5f;
+                animator.speed = 1.5f; // Tốc độ animation bơi bình thường
         }
 
+        // Di chuyển người chơi theo hướng nhìn
         Vector3 move = transform.forward * speed * Time.fixedDeltaTime;
         rb.MovePosition(rb.position + move);
     }
 
+    // Kích hoạt trạng thái bơi khi vào vùng nước
     public void EnterWater()
     {
         isSwimming = true;
@@ -79,8 +83,10 @@ public class PlayerSwimming : MonoBehaviour
         if (animator != null)
             animator.SetBool("isSwimming", true);
 
+        // Tắt trọng lực để sử dụng lực đẩy của nước
         rb.useGravity = false;
 
+        // Phát âm thanh bơi
         if (swimAudio != null && !swimAudio.isPlaying)
         {
             swimAudio.loop = true;
@@ -88,6 +94,7 @@ public class PlayerSwimming : MonoBehaviour
         }
     }
 
+    // Tắt trạng thái bơi khi ra khỏi vùng nước
     public void ExitWater()
     {
         isSwimming = false;
@@ -98,6 +105,7 @@ public class PlayerSwimming : MonoBehaviour
             animator.speed = 1f;
         }
 
+        // Bật lại trọng lực khi lên cạn
         rb.useGravity = true;
 
         if (swimAudio != null)
