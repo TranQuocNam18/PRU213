@@ -6,8 +6,14 @@ public class ElderNPC : MonoBehaviour
 
     [Header("Look At Player")]
     public float lookAtSpeed = 5f;
+    public AudioSource voiceSource;
 
-    // private để Unity KHÔNG serialize - đảm bảo dùng đúng giá trị trong code
+    [Header("Meet Elder Voice (sync theo index lines)")]
+    public AudioClip[] meetElderVoice;
+
+    [Header("Quest Voice (sync theo index lines)")]
+    public AudioClip[] elderQuestVoice;
+
     private static readonly string[] linesMeetElder = new string[] {
         "Trưởng Làng: Chào cậu thanh niên... Lâu lắm rồi mới có người lạ đến làng này.",
         "Tôi: Cháu đến du lịch thôi. Nghe nói nơi này từng là làng du lịch sinh thái nổi tiếng.",
@@ -26,7 +32,7 @@ public class ElderNPC : MonoBehaviour
         "Trưởng Làng: Những linh hồn chết đuối bị mắc kẹt dưới nước.",
         "Trưởng Làng: Chúng chỉ có thể siêu thoát khi có người khác chết thay.",
         "Tôi: Cháu phải làm gì bây giờ?!",
-        "Trưởng Làng: Trong làng có 5 lá bùa phong ấn đã bị thất lạc.",
+        "Trưởng Làng: Trong làng có 5 lá bùa phong ấn đã bị thất l��c.",
         "Trưởng Làng: Nếu cậu tìm đủ và mang đến cho Sư Thầy, ông ấy có thể làm nghi thức trừ tà.",
         "Trưởng Làng: Mau lên... trước khi nó tìm được cậu."
     };
@@ -36,14 +42,12 @@ public class ElderNPC : MonoBehaviour
     float interactCooldown = 0f;
     Transform playerTransform;
 
+    private GameManager.StoryState conversationState;
+
     void Update()
     {
-        if (interactCooldown > 0f)
-        {
-            interactCooldown -= Time.unscaledDeltaTime;
-        }
+        if (interactCooldown > 0f) interactCooldown -= Time.unscaledDeltaTime;
 
-        // Nhìn về phía người chơi khi họ ở gần
         if (playerInRange && playerTransform != null)
         {
             Vector3 direction = playerTransform.position - transform.position;
@@ -57,11 +61,10 @@ public class ElderNPC : MonoBehaviour
 
         if (playerInRange && !isTalking && interactCooldown <= 0f)
         {
-            bool dialogueActive = DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive();
-
-            if (!dialogueActive && Input.GetKeyDown(KeyCode.F))
+            if (DialogueManager.Instance != null &&
+                !DialogueManager.Instance.IsDialogueActive() &&
+                Input.GetKeyDown(KeyCode.F))
             {
-                Input.ResetInputAxes();
                 StartTalk();
             }
         }
@@ -69,36 +72,72 @@ public class ElderNPC : MonoBehaviour
 
     public void StartTalk()
     {
-        if (GameManager.Instance == null) return;
+        if (GameManager.Instance == null || dialogueManager == null) return;
 
         isTalking = true;
 
-        if (GameManager.Instance.currentState == GameManager.StoryState.MeetElder)
+        DialogueManager.Instance.currentElder = this;
+        DialogueManager.Instance.currentMonk = null;
+
+        conversationState = GameManager.Instance.currentState;
+
+        if (conversationState == GameManager.StoryState.MeetElder)
         {
             dialogueManager.StartDialogue(linesMeetElder);
             GameManager.Instance.AdvanceStoryState(GameManager.StoryState.MeetMonk);
         }
-        else if (GameManager.Instance.currentState == GameManager.StoryState.NightStalking)
+        else if (conversationState == GameManager.StoryState.NightStalking)
         {
             dialogueManager.StartDialogue(linesElderQuest);
             GameManager.Instance.AdvanceStoryState(GameManager.StoryState.SearchTalismans);
-
-            if (ObjectiveManager.Instance != null)
-            {
-                ObjectiveManager.Instance.StartObjective();
-            }
+            if (ObjectiveManager.Instance != null) ObjectiveManager.Instance.StartObjective();
         }
-        else if (GameManager.Instance.currentState == GameManager.StoryState.SearchTalismans)
+        else if (conversationState == GameManager.StoryState.SearchTalismans)
         {
-            dialogueManager.StartDialogue(new string[] {
-                "Trưởng Làng: Mau tìm đủ 5 lá bùa và mang đến cho Thầy Mùi!"
-            });
+            dialogueManager.StartDialogue(new string[] { "Trưởng Làng: Mau tìm đủ 5 lá bùa và mang đến cho Thầy Mùi!" });
         }
         else
         {
-            dialogueManager.StartDialogue(new string[] {
-                "Trưởng Làng: Cẩn thận nhé chàng trai."
-            });
+            dialogueManager.StartDialogue(new string[] { "Trưởng Làng: Cẩn thận nhé chàng trai." });
+        }
+    }
+
+    public void PlayVoiceForLine(int lineIndex)
+    {
+        AudioClip clip = null;
+
+        if (conversationState == GameManager.StoryState.MeetElder)
+        {
+            if (meetElderVoice != null && lineIndex >= 0 && lineIndex < meetElderVoice.Length)
+                clip = meetElderVoice[lineIndex];
+        }
+        else if (conversationState == GameManager.StoryState.NightStalking ||
+                 conversationState == GameManager.StoryState.SearchTalismans)
+        {
+            if (elderQuestVoice != null && lineIndex >= 0 && lineIndex < elderQuestVoice.Length)
+                clip = elderQuestVoice[lineIndex];
+        }
+
+        if (clip == null) return;
+
+        // Voice người chơi (p_) -> GameManager voiceSource
+        if (clip.name.StartsWith("p_"))
+        {
+            if (GameManager.Instance != null && GameManager.Instance.voiceSource != null)
+            {
+                GameManager.Instance.voiceSource.Stop();
+                GameManager.Instance.voiceSource.clip = clip;
+                GameManager.Instance.voiceSource.Play();
+            }
+        }
+        else // Voice trưởng làng (tr_)
+        {
+            if (voiceSource != null)
+            {
+                voiceSource.Stop();
+                voiceSource.clip = clip;
+                voiceSource.Play();
+            }
         }
     }
 

@@ -7,6 +7,8 @@ public class GameManager : MonoBehaviour
 {
     public AudioSource voiceSource;
     public AudioClip[] introVoices;
+    [Header("Player Voices")]
+    public AudioClip[] playerVoices; // voice cho độc thoại của "Tôi" khi không có NPC
     Coroutine voiceCoroutine;
     public float textSpeedMultiplier = 0.5f;
     public static GameManager Instance;
@@ -47,6 +49,10 @@ public class GameManager : MonoBehaviour
         "Tôi sẽ là người chứng minh tất cả chỉ là tin đồn."
     };
 
+    [Header("In-Game Monologue")]
+    private string[] inGameLines = new string[] {
+        "Tôi: Cuối cùng mình cũng đến được nơi này… Đây chính là ngôi làng mà mình đã tìm kiếm."
+    };
     void Awake()
     {
         if (Instance == null)
@@ -307,6 +313,8 @@ public class GameManager : MonoBehaviour
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+
+            StartCoroutine(StartInGameMonologue());
         }
     }
     IEnumerator PlayVoiceDelayed(float delay)
@@ -368,6 +376,20 @@ public class GameManager : MonoBehaviour
         {
             if (SkyManager.Instance != null)
                 SkyManager.Instance.EnableFog();
+        }
+    }
+    IEnumerator StartInGameMonologue()
+    {
+        // đợi 1 chút sau khi intro canvas bị destroy + timeScale về 1
+        yield return new WaitForSeconds(0.5f);
+
+        if (DialogueManager.Instance != null)
+        {
+            // ép về độc thoại để DialogueManager dùng playerVoices[]
+            DialogueManager.Instance.currentElder = null;
+            DialogueManager.Instance.currentMonk = null;
+
+            DialogueManager.Instance.StartDialogue(inGameLines);
         }
     }
 

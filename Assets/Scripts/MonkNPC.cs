@@ -6,14 +6,12 @@ public class MonkNPC : MonoBehaviour
 
     [Header("Look At Player")]
     public float lookAtSpeed = 5f;
+    public AudioSource voiceSource;
 
-    bool playerInRange = false;
-    bool isTalking = false;
-    float interactCooldown = 0f;
-    bool hasPreGameTalked = false;
-    Transform playerTransform;
+    [Header("Voice Clips (sync theo index lines, có cả p_)")]
+    public AudioClip[] meetMonkVoice;
+    public AudioClip[] preGameVoice;
 
-    // private static readonly - Unity KHÔNG serialize, luôn dùng đúng giá trị trong code
     private static readonly string[] linesMeetMonk = new string[] {
         "Nhà sư: Ta đã chờ con đến đây.",
         "Tôi: Thầy là ai?",
@@ -41,18 +39,21 @@ public class MonkNPC : MonoBehaviour
         "Nhà sư: Ma Da sẽ chiếm lấy linh hồn của con."
     };
 
+    bool playerInRange = false;
+    bool isTalking = false;
+    float interactCooldown = 0f;
+    Transform playerTransform;
+
+    private GameManager.StoryState conversationState;
+
     void Update()
     {
-        if (interactCooldown > 0f)
-        {
-            interactCooldown -= Time.unscaledDeltaTime;
-        }
+        if (interactCooldown > 0f) interactCooldown -= Time.unscaledDeltaTime;
 
-        // Nhìn về phía người chơi khi họ ở gần
         if (playerInRange && playerTransform != null)
         {
             Vector3 direction = playerTransform.position - transform.position;
-            direction.y = 0f; // Không cúi/ngửa đầu
+            direction.y = 0f;
             if (direction != Vector3.zero)
             {
                 Quaternion targetRot = Quaternion.LookRotation(direction);
@@ -62,12 +63,10 @@ public class MonkNPC : MonoBehaviour
 
         if (playerInRange && !isTalking && interactCooldown <= 0f)
         {
-            bool dialogueActive = DialogueManager.Instance != null &&
-                                  DialogueManager.Instance.IsDialogueActive();
-
-            if (!dialogueActive && Input.GetKeyDown(KeyCode.F))
+            if (DialogueManager.Instance != null &&
+                !DialogueManager.Instance.IsDialogueActive() &&
+                Input.GetKeyDown(KeyCode.F))
             {
-                Input.ResetInputAxes();
                 StartTalk();
             }
         }
@@ -75,39 +74,75 @@ public class MonkNPC : MonoBehaviour
 
     public void StartTalk()
     {
-        if (GameManager.Instance == null) return;
+        if (GameManager.Instance == null || dialogueManager == null) return;
 
         isTalking = true;
 
-        if (GameManager.Instance.currentState == GameManager.StoryState.MeetMonk)
+        DialogueManager.Instance.currentMonk = this;
+        DialogueManager.Instance.currentElder = null;
+
+        conversationState = GameManager.Instance.currentState;
+
+        if (conversationState == GameManager.StoryState.MeetMonk)
         {
             dialogueManager.StartDialogue(linesMeetMonk);
             GameManager.Instance.AdvanceStoryState(GameManager.StoryState.NightStalking);
         }
-        else if (GameManager.Instance.currentState == GameManager.StoryState.ReturnMonk ||
+        else if (conversationState == GameManager.StoryState.ReturnMonk ||
                  (ObjectiveManager.Instance != null && ObjectiveManager.Instance.objectiveCompleted))
         {
             GameManager.Instance.AdvanceStoryState(GameManager.StoryState.Minigame);
 
             if (ObjectiveManager.Instance != null && ObjectiveManager.Instance.talismanUI != null)
-            {
                 ObjectiveManager.Instance.talismanUI.SetActive(false);
-            }
 
-            // In DialogueManager, we'll hook the end of dialogue to start minigame directly if state is Minigame
             dialogueManager.StartDialogue(linesPreGame);
         }
-        else if (GameManager.Instance.currentState == GameManager.StoryState.SearchTalismans)
+        else if (conversationState == GameManager.StoryState.SearchTalismans)
         {
-            dialogueManager.StartDialogue(new string[] {
-                "Nhà sư: Hãy tìm bùa đi đã, bần đạo sẽ giúp con phong ấn nó."
-            });
+            dialogueManager.StartDialogue(new string[] { "Nhà sư: Hãy tìm bùa đi đã, bần đạo sẽ giúp con phong ấn nó." });
         }
         else
         {
-            dialogueManager.StartDialogue(new string[] {
-                "Nhà sư: A di đà Phật..."
-            });
+            dialogueManager.StartDialogue(new string[] { "Nhà sư: A di đà Phật..." });
+        }
+    }
+
+    public void PlayVoiceForLine(int lineIndex)
+    {
+        AudioClip clip = null;
+
+        if (conversationState == GameManager.StoryState.MeetMonk)
+        {
+            if (meetMonkVoice != null && lineIndex >= 0 && lineIndex < meetMonkVoice.Length)
+                clip = meetMonkVoice[lineIndex];
+        }
+        else if (conversationState == GameManager.StoryState.Minigame || conversationState == GameManager.StoryState.ReturnMonk)
+        {
+            if (preGameVoice != null && lineIndex >= 0 && lineIndex < preGameVoice.Length)
+                clip = preGameVoice[lineIndex];
+        }
+
+        if (clip == null) return;
+
+        // Voice người chơi (p_) -> GameManager voiceSource
+        if (clip.name.StartsWith("p_"))
+        {
+            if (GameManager.Instance != null && GameManager.Instance.voiceSource != null)
+            {
+                GameManager.Instance.voiceSource.Stop();
+                GameManager.Instance.voiceSource.clip = clip;
+                GameManager.Instance.voiceSource.Play();
+            }
+        }
+        else // Voice nhà sư
+        {
+            if (voiceSource != null)
+            {
+                voiceSource.Stop();
+                voiceSource.clip = clip;
+                voiceSource.Play();
+            }
         }
     }
 
