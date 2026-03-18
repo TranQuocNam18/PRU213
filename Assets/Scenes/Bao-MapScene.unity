@@ -52402,9 +52402,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3892eb585f614df428375adcb6993443, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInteract
-  interactDistance: 3
-  interactText: {fileID: 0}
-  playerCamera: {fileID: 0}
 --- !u!114 &1393001105
 MonoBehaviour:
   m_ObjectHideFlags: 0
