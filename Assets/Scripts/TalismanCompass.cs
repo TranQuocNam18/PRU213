@@ -80,7 +80,12 @@ public class TalismanCompass : MonoBehaviour
         if (GameManager.Instance == null) return;
 
         var state = GameManager.Instance.currentState;
-        if (state == GameManager.StoryState.Intro || state == GameManager.StoryState.MeetElder || state == GameManager.StoryState.NightStalking)
+        if (state == GameManager.StoryState.MeetOngTam)
+        {
+            OngTamNPC ongTam = FindObjectOfType<OngTamNPC>();
+            if (ongTam != null) RegisterTalisman(ongTam.transform);
+        }
+        else if (state == GameManager.StoryState.MeetElder || state == GameManager.StoryState.NightStalking)
         {
             ElderNPC elder = FindObjectOfType<ElderNPC>();
             if (elder != null) RegisterTalisman(elder.transform);

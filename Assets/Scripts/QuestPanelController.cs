@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
@@ -17,9 +17,9 @@ public class QuestPanelController : MonoBehaviour
     // Kích thước của Panel báo nhiệm vụ
     private float panelWidth = 350f;
     private float panelHeight = 120f;
-    
+
     private float slideDuration = 0.5f;
-    
+
     private string currentQuestText = "";
 
     void Awake()
@@ -51,11 +51,11 @@ public class QuestPanelController : MonoBehaviour
             canvas = gameObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 9999; // Đặt lên cao để hiện trên UI khác
-            
+
             CanvasScaler scaler = gameObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
-            
+
             gameObject.AddComponent<GraphicRaycaster>();
         }
 
@@ -67,14 +67,14 @@ public class QuestPanelController : MonoBehaviour
         bgImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f); // Đen mờ
 
         panelRect = panelObj.GetComponent<RectTransform>();
-        
+
         // Anchor bên phải giữa
         panelRect.anchorMin = new Vector2(1, 0.5f);
         panelRect.anchorMax = new Vector2(1, 0.5f);
         panelRect.pivot = new Vector2(1, 0.5f); // Pivot bên phải
-        
+
         panelRect.sizeDelta = new Vector2(panelWidth, panelHeight);
-        
+
         // Ẩn panel lúc đầu (bằng cách trượt ra khỏi màn hình)
         panelRect.anchoredPosition = new Vector2(panelWidth + 10, 0); // Vị trí giấu đi
 
@@ -129,22 +129,22 @@ public class QuestPanelController : MonoBehaviour
         questTextTMP.text = questText;
 
         if (slideCoroutine != null) StopCoroutine(slideCoroutine);
-        
+
         // Luôn trượt ra một chút rồi hiện lại để gây chú ý nếu chỉ update text
         if (isVisible)
         {
-             slideCoroutine = StartCoroutine(BounceInAnimation());
+            slideCoroutine = StartCoroutine(BounceInAnimation());
         }
         else
         {
-             slideCoroutine = StartCoroutine(SlideAnimation(new Vector2(0, 0))); // Slide in to X=0
+            slideCoroutine = StartCoroutine(SlideAnimation(new Vector2(0, 0))); // Slide in to X=0
         }
     }
-    
+
     public void HideQuestPanel()
     {
         if (!isVisible) return;
-        
+
         if (slideCoroutine != null) StopCoroutine(slideCoroutine);
         slideCoroutine = StartCoroutine(SlideAnimation(new Vector2(panelWidth, 0))); // Slide out
     }
@@ -164,13 +164,13 @@ public class QuestPanelController : MonoBehaviour
         panelRect.anchoredPosition = targetPos;
         isVisible = (targetPos.x == 0);
     }
-    
+
     private IEnumerator BounceInAnimation()
     {
         // Kéo vô 1 chút
         Vector2 startPos = panelRect.anchoredPosition;
         Vector2 pulledPos = new Vector2(50f, 0f);
-        
+
         float elapsed = 0;
         while (elapsed < 0.15f)
         {
@@ -178,7 +178,7 @@ public class QuestPanelController : MonoBehaviour
             elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
-        
+
         // Đẩy lại
         elapsed = 0;
         while (elapsed < 0.2f)
@@ -187,7 +187,7 @@ public class QuestPanelController : MonoBehaviour
             elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
-        
+
         panelRect.anchoredPosition = Vector2.zero;
         isVisible = true;
     }

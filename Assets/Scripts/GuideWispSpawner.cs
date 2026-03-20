@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 public class GuideWispSpawner : MonoBehaviour
@@ -18,9 +18,9 @@ public class GuideWispSpawner : MonoBehaviour
         if (GameManager.Instance == null) return;
 
         // Chỉ spawn wisp nếu có mục tiêu để di chuyển tới
-        bool hasObjective = (GameManager.Instance.currentState >= GameManager.StoryState.Intro && 
+        bool hasObjective = (GameManager.Instance.currentState >= GameManager.StoryState.Intro &&
                              GameManager.Instance.currentState < GameManager.StoryState.Minigame);
-        
+
         if (!hasObjective) return;
 
         spawnTimer += Time.deltaTime;
@@ -56,7 +56,12 @@ public class GuideWispSpawner : MonoBehaviour
     {
         // Lấy mục tiêu từ state hiện tại
         var state = GameManager.Instance.currentState;
-        if (state == GameManager.StoryState.Intro || state == GameManager.StoryState.MeetElder || state == GameManager.StoryState.NightStalking)
+        if (state == GameManager.StoryState.MeetOngTam)
+        {
+            OngTamNPC ongTam = FindObjectOfType<OngTamNPC>();
+            if (ongTam != null) return ongTam.transform;
+        }
+        else if (state == GameManager.StoryState.MeetElder || state == GameManager.StoryState.NightStalking)
         {
             ElderNPC elder = FindObjectOfType<ElderNPC>();
             if (elder != null) return elder.transform;

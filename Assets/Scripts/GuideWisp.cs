@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class GuideWisp : MonoBehaviour
 {
@@ -19,7 +19,7 @@ public class GuideWisp : MonoBehaviour
         GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         sphere.transform.SetParent(this.transform, false);
         sphere.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-        
+
         Destroy(sphere.GetComponent<SphereCollider>()); // Không cần va chạm
 
         Renderer rend = sphere.GetComponent<Renderer>();
@@ -51,7 +51,7 @@ public class GuideWisp : MonoBehaviour
     void Update()
     {
         age += Time.deltaTime;
-        
+
         // Mờ dần rồi biến mất
         if (age > lifetime)
         {
@@ -68,13 +68,13 @@ public class GuideWisp : MonoBehaviour
 
         // Di chuyển về phía mục tiêu kèm hiệu ứng lượn sóng
         Vector3 dir = (target.position - transform.position).normalized;
-        
+
         // Thêm chuyển động lượn
         float waveY = Mathf.Sin(age * 5f) * 0.5f;
         float waveX = Mathf.Cos(age * 3f) * 0.5f;
-        
+
         Vector3 waveOffset = transform.right * waveX + transform.up * waveY;
-        
+
         Vector3 moveDir = (dir + waveOffset * 0.5f).normalized;
 
         transform.position += moveDir * speed * Time.deltaTime;

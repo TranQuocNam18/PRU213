@@ -1,38 +1,39 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
 
-// Quản lý chính của game, xử lý luồng cốt truyền và trạng thái trò chơi
 public class GameManager : MonoBehaviour
 {
     public AudioSource voiceSource;
     public AudioClip[] introVoices;
+    [Header("Player Voices")]
+    public AudioClip[] playerVoices; // voice cho độc thoại của "Tôi" khi không có NPC
     Coroutine voiceCoroutine;
     public float textSpeedMultiplier = 0.5f;
-    public static GameManager Instance; // Singleton instance để truy cập từ mọi nơi
+    public static GameManager Instance;
 
     public GameObject gameOverPanel;
     public MadaFollowerAI madaAI;
     public GameObject[] otherUIPanels;
-    
+
     [Header("Quest UI")]
     // Will dynamically find TalismanUI to display quests
 
     public bool isGameOver = false;
-    public bool isDialogue = false; // thêm trạng thái hội thoại
+    public bool isDialogue = false;
 
-    // Các giai đoạn chính của cốt truyện
     public enum StoryState
     {
-        Intro,           // Cảnh giới thiệu mở đầu
-        MeetElder,       // Gặp Trưởng làng lần đầu
-        MeetMonk,        // Gặp Sư thầy
-        NightStalking,   // Giai đoạn bị theo dõi buổi đêm
-        SearchTalismans, // Tìm kiếm các lá bùa
-        ReturnMonk,      // Quay lại gặp Sư thầy sau khi có bùa
-        Minigame,        // Giai đoạn thực hiện minigame phong ấn
-        Win              // Kết thúc màn chơi (Thắng)
+        Intro,
+        MeetOngTam,
+        MeetElder,
+        MeetMonk,
+        NightStalking,
+        SearchTalismans,
+        ReturnMonk,
+        Minigame,
+        Win
     }
     public StoryState currentState = StoryState.Intro;
 
@@ -49,7 +50,11 @@ public class GameManager : MonoBehaviour
         "Tôi sẽ là người chứng minh tất cả chỉ là tin đồn."
     };
 
-    // Khởi tạo Singleton khi game load
+    [Header("In-Game Monologue")]
+    private string[] inGameLines = new string[] {
+        "Tôi: Cuối cùng mình cũng đến được nơi này… Đây chính là ngôi làng mà mình đã tìm kiếm."
+    };
+
     void Awake()
     {
         if (Instance == null)
@@ -62,14 +67,14 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // Thiết lập ban đầu khi bắt đầu màn chơi
     void Start()
     {
         gameOverPanel.SetActive(false);
         CreateIntroUI();
         ShowIntroLine();
         UpdateQuestUI();
-        //tắt intro tiếng thở
+
+        // tắt intro tiếng thở
         PlayerAudioManager audioManager = FindObjectOfType<PlayerAudioManager>();
         audioManager.enabled = false;
 
@@ -98,22 +103,18 @@ public class GameManager : MonoBehaviour
                 {
                     StopCoroutine(typingCoroutine);
                     isTyping = false;
-
                     introTextTMP.text = introLines[currentIntroIndex];
-
                     return;
                 }
 
                 // Nếu chữ đã hiện xong → qua đoạn tiếp
                 currentIntroIndex++;
                 ShowIntroLine();
-
                 introInputCooldown = 0.2f;
             }
         }
     }
 
-    // Cập nhật nội dung Quest (nhiệm vụ) trên UI dựa theo StoryState hiện tại
     public void UpdateQuestUI()
     {
         string questString = "";
@@ -121,7 +122,10 @@ public class GameManager : MonoBehaviour
         switch (currentState)
         {
             case StoryState.Intro:
-                questString = "Đi nói chuyện với trưởng làng";
+                questString = "";
+                break;
+            case StoryState.MeetOngTam:
+                questString = "Nói chuyện với ông Tám";
                 break;
             case StoryState.MeetElder:
                 questString = "Nói chuyện với trưởng làng";
@@ -172,14 +176,13 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // Cập nhật lên UI Trượt
+        // Cập nhật lên UI Trượt (QuestPanelController)
         if (QuestPanelController.Instance == null)
         {
-            // Tự động tạo nếu chưa có
             GameObject questPanelObj = new GameObject("QuestPanelController");
             questPanelObj.AddComponent<QuestPanelController>();
         }
-        
+
         if (QuestPanelController.Instance != null)
         {
             QuestPanelController.Instance.ShowQuest(questString);
@@ -189,7 +192,6 @@ public class GameManager : MonoBehaviour
     void CreateIntroUI()
     {
         introCanvasObj = new GameObject("IntroCanvas");
-
         Canvas canvas = introCanvasObj.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 9999;
@@ -200,10 +202,7 @@ public class GameManager : MonoBehaviour
 
         introCanvasObj.AddComponent<UnityEngine.UI.GraphicRaycaster>();
 
-        // ======================
         // FULL BLACK BACKGROUND
-        // ======================
-
         GameObject introPanel = new GameObject("IntroPanel");
         introPanel.transform.SetParent(introCanvasObj.transform, false);
 
@@ -215,41 +214,30 @@ public class GameManager : MonoBehaviour
         rt.anchorMax = Vector2.one;
         rt.sizeDelta = Vector2.zero;
 
-        // ======================
         // TEXT PANEL (CENTER BOX)
-        // ======================
-
         GameObject textPanel = new GameObject("TextPanel");
         textPanel.transform.SetParent(introPanel.transform, false);
 
         UnityEngine.UI.Image panelImg = textPanel.AddComponent<UnityEngine.UI.Image>();
-        panelImg.color = new Color(0, 0, 0, 0f); // nền mờ
+        panelImg.color = new Color(0, 0, 0, 0f);
 
         RectTransform panelRT = textPanel.GetComponent<RectTransform>();
         panelRT.anchorMin = new Vector2(0.25f, 0.4f);
         panelRT.anchorMax = new Vector2(0.75f, 0.6f);
         panelRT.sizeDelta = Vector2.zero;
 
-        // ======================
         // STORY TEXT
-        // ======================
-
         GameObject textObj = new GameObject("IntroText");
         textObj.transform.SetParent(textPanel.transform, false);
 
         introTextTMP = textObj.AddComponent<TextMeshProUGUI>();
         introTextTMP.color = Color.white;
         introTextTMP.fontSize = 52;
-        introTextTMP.lineSpacing = 20;
-        introTextTMP.margin = new Vector4(120, 80, 120, 80);
+        introTextTMP.lineSpacing = 10;
+        introTextTMP.margin = new Vector4(80, 60, 80, 60);
         introTextTMP.characterSpacing = 2;
         introTextTMP.alignment = TextAlignmentOptions.Center;
         introTextTMP.enableWordWrapping = true;
-
-        introTextTMP.lineSpacing = 10;
-        introTextTMP.margin = new Vector4(80, 60, 80, 60);
-
-        // outline chữ
         introTextTMP.outlineWidth = 0.2f;
         introTextTMP.outlineColor = Color.black;
 
@@ -259,10 +247,7 @@ public class GameManager : MonoBehaviour
         textRT.offsetMin = Vector2.zero;
         textRT.offsetMax = Vector2.zero;
 
-        // ======================
         // CLICK TO CONTINUE TEXT
-        // ======================
-
         GameObject hint = new GameObject("HintText");
         hint.transform.SetParent(introPanel.transform, false);
 
@@ -274,16 +259,11 @@ public class GameManager : MonoBehaviour
         hintText.color = new Color(1, 1, 1, 0.7f);
         StartCoroutine(BlinkHint(hintText));
 
-
         RectTransform hintRT = hint.GetComponent<RectTransform>();
         hintRT.anchorMin = new Vector2(0.7f, 0.05f);
         hintRT.anchorMax = new Vector2(0.98f, 0.12f);
         hintRT.offsetMin = Vector2.zero;
         hintRT.offsetMax = Vector2.zero;
-
-        // ======================
-        // PAUSE GAME DURING INTRO
-        // ======================
 
         Time.timeScale = 0f;
         isDialogue = true;
@@ -294,39 +274,37 @@ public class GameManager : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
+
     IEnumerator BlinkHint(TextMeshProUGUI hint)
     {
         while (true)
         {
             hint.alpha = 0.2f;
             yield return new WaitForSecondsRealtime(0.5f);
-
             hint.alpha = 0.8f;
             yield return new WaitForSecondsRealtime(0.5f);
         }
     }
+
     void ShowIntroLine()
     {
         if (currentIntroIndex < introLines.Length)
         {
-            // dừng coroutine cũ
             if (typingCoroutine != null)
                 StopCoroutine(typingCoroutine);
 
             if (voiceCoroutine != null)
                 StopCoroutine(voiceCoroutine);
 
-            // dừng voice cũ
             if (voiceSource != null && voiceSource.isPlaying)
                 voiceSource.Stop();
 
             typingCoroutine = StartCoroutine(TypeLine(introLines[currentIntroIndex]));
-
             voiceCoroutine = StartCoroutine(PlayVoiceDelayed(0.2f));
         }
         else
         {
-            voiceSource.Stop();   // dừng voice ngay lập tức
+            voiceSource.Stop();
 
             Destroy(introCanvasObj);
             introCanvasObj = null;
@@ -337,12 +315,16 @@ public class GameManager : MonoBehaviour
             PlayerAudioManager audioManager = FindObjectOfType<PlayerAudioManager>();
             audioManager.enabled = true;
 
-            AdvanceStoryState(StoryState.MeetElder);
+            // Bắt đầu từ Ông Tám trước khi gặp Trưởng Làng
+            AdvanceStoryState(StoryState.MeetOngTam);
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+
+            StartCoroutine(StartInGameMonologue());
         }
     }
+
     IEnumerator PlayVoiceDelayed(float delay)
     {
         yield return new WaitForSecondsRealtime(delay);
@@ -354,6 +336,7 @@ public class GameManager : MonoBehaviour
             voiceSource.Play();
         }
     }
+
     IEnumerator TypeLine(string line)
     {
         isTyping = true;
@@ -374,7 +357,6 @@ public class GameManager : MonoBehaviour
         isTyping = false;
     }
 
-    // Chuyển sang trạng thái cốt truyện mới và kích hoạt các hiệu ứng môi trường/AI tương ứng
     public void AdvanceStoryState(StoryState newState)
     {
         currentState = newState;
@@ -382,20 +364,16 @@ public class GameManager : MonoBehaviour
 
         UpdateQuestUI();
 
-        // Cập nhật la bàn chỉ hướng
         if (TalismanCompass.Instance != null)
         {
             TalismanCompass.Instance.UpdateWaypoints();
         }
 
-        // Xử lý các sự kiện đặc biệt khi chuyển state
         if (newState == StoryState.NightStalking)
         {
-            // Chuyển trời tối
             if (SkyManager.Instance != null)
                 SkyManager.Instance.ChangeToDark();
-            
-            // Kích hoạt AI Ma Da bám đuôi người chơi
+
             if (madaAI != null)
             {
                 madaAI.enabled = true;
@@ -404,9 +382,23 @@ public class GameManager : MonoBehaviour
         }
         else if (newState == StoryState.SearchTalismans)
         {
-            // Kích hoạt sương mù khi đi tìm bùa
             if (SkyManager.Instance != null)
                 SkyManager.Instance.EnableFog();
+        }
+    }
+
+    IEnumerator StartInGameMonologue()
+    {
+        yield return new WaitForSeconds(0.5f);
+
+        if (DialogueManager.Instance != null)
+        {
+            // ép về độc thoại để DialogueManager dùng playerVoices[]
+            DialogueManager.Instance.currentElder = null;
+            DialogueManager.Instance.currentMonk = null;
+            DialogueManager.Instance.currentOngTam = null;
+
+            DialogueManager.Instance.StartDialogue(inGameLines);
         }
     }
 
@@ -414,49 +406,42 @@ public class GameManager : MonoBehaviour
     // GAME OVER
     // ==============================
 
-    // Xử lý khi người chơi chết (Game Over)
     public void GameOver()
     {
         isGameOver = true;
 
-    // Tắt các UI trong mảng otherUIPanels
-    foreach (GameObject ui in otherUIPanels)
-    {
-        if (ui != null)
-            ui.SetActive(false);
-    }
-        
-    // Tìm và tắt tất cả các Canvas khác để tránh đè UI lên panel GameOver
-    Canvas[] allCanvases = FindObjectsOfType<Canvas>();
-    foreach (Canvas c in allCanvases)
-    {
-        if (c.gameObject != gameOverPanel && !gameOverPanel.transform.IsChildOf(c.transform))
+        foreach (GameObject ui in otherUIPanels)
         {
-            c.gameObject.SetActive(false);
+            if (ui != null)
+                ui.SetActive(false);
         }
-    }
 
-    // Tắt các UI con cùng cấp với gameOverPanel
-    Canvas mainCanvas = gameOverPanel.GetComponentInParent<Canvas>();
-    if (mainCanvas != null)
-    {
-        foreach (Transform child in mainCanvas.transform)
+        Canvas[] allCanvases = FindObjectsOfType<Canvas>();
+        foreach (Canvas c in allCanvases)
         {
-            if (child.gameObject != gameOverPanel && !gameOverPanel.transform.IsChildOf(child))
+            if (c.gameObject != gameOverPanel && !gameOverPanel.transform.IsChildOf(c.transform))
             {
-                child.gameObject.SetActive(false);
+                c.gameObject.SetActive(false);
             }
         }
+
+        Canvas mainCanvas = gameOverPanel.GetComponentInParent<Canvas>();
+        if (mainCanvas != null)
+        {
+            foreach (Transform child in mainCanvas.transform)
+            {
+                if (child.gameObject != gameOverPanel && !gameOverPanel.transform.IsChildOf(child))
+                {
+                    child.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        gameOverPanel.SetActive(true);
+        Time.timeScale = 0f;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
-
-    // Hiển thị Panel Game Over và dừng thời gian
-    gameOverPanel.SetActive(true);
-    Time.timeScale = 0f;
-
-    // Hiện chuột để người chơi tương tác với nút bấm
-    Cursor.lockState = CursorLockMode.None;
-    Cursor.visible = true;
-}
 
     // ==============================
     // DIALOGUE SYSTEM
@@ -465,7 +450,6 @@ public class GameManager : MonoBehaviour
     public void StartDialogue()
     {
         isDialogue = true;
-
         Time.timeScale = 0f;
 
         if (madaAI != null)
@@ -504,10 +488,8 @@ public class GameManager : MonoBehaviour
     public void ResetGame()
     {
         Time.timeScale = 1f;
-
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
@@ -518,9 +500,7 @@ public class GameManager : MonoBehaviour
     public void ResumeGame()
     {
         gameOverPanel.SetActive(false);
-
         Time.timeScale = 1f;
-
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
