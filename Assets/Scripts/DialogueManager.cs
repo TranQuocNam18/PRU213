@@ -29,8 +29,6 @@ public class DialogueManager : MonoBehaviour
 
     // dùng cho độc thoại (không có NPC)
     private int playerVoiceCount = 0;
-    // dùng cho voice riêng của Ông Tám (đếm mỗi khi gặp "Ông Tám:")
-    private int ongTamVoiceCount = 0;
     private float nextLineCooldown = 0f;
 
     void Awake()
@@ -60,7 +58,6 @@ public class DialogueManager : MonoBehaviour
         lines = dialogueLines;
         index = 0;
         playerVoiceCount = 0;
-        ongTamVoiceCount = 0;
 
         isTalking = true;
 
@@ -89,7 +86,8 @@ public class DialogueManager : MonoBehaviour
         // Stop voice monk
         if (currentMonk != null && currentMonk.voiceSource != null)
             currentMonk.voiceSource.Stop();
-        // Stop voice Ong Tám 
+
+        // Stop voice Ông Tám
         if (currentOngTam != null)
             currentOngTam.StopVoice();
     }
@@ -101,7 +99,6 @@ public class DialogueManager : MonoBehaviour
         if (GameManager.Instance.playerVoices == null) return;
 
         if (voiceIdx < 0 || voiceIdx >= GameManager.Instance.playerVoices.Length) return;
-
         AudioClip clip = GameManager.Instance.playerVoices[voiceIdx];
         if (clip == null) return;
 
@@ -176,7 +173,7 @@ public class DialogueManager : MonoBehaviour
 
             content = trimmedLine.Substring("Ông Tám:".Length).Trim();
 
-            // PHÁT VOICE THEO INDEX DÒNG (0..lines.Length-1)
+            // Phát voice theo chỉ số dòng hiện tại
             if (currentOngTam != null)
                 currentOngTam.PlayVoiceForOngTamLine(index, isOngTamRepeatDialogue);
         }
@@ -217,7 +214,7 @@ public class DialogueManager : MonoBehaviour
         if (dialogueText != null)
             dialogueText.text = content;
     }
-    
+
     public void NextLine()
     {
         index++;
@@ -239,7 +236,23 @@ public class DialogueManager : MonoBehaviour
 
         if (currentElder != null) { currentElder.EndTalk(); currentElder = null; }
         if (currentMonk != null) { currentMonk.EndTalk(); currentMonk = null; }
-        if (currentOngTam != null) { currentOngTam.EndTalk(); currentOngTam = null; }
+
+        // Ông Tám: kết thúc và advance state nếu là lần nói đầu tiên
+        if (currentOngTam != null)
+        {
+            bool wasRepeat = isOngTamRepeatDialogue;
+            currentOngTam.EndTalk();
+            currentOngTam = null;
+            isOngTamRepeatDialogue = false;
+
+            if (!wasRepeat && GameManager.Instance != null &&
+                GameManager.Instance.currentState == GameManager.StoryState.MeetOngTam)
+            {
+                GameManager.Instance.AdvanceStoryState(GameManager.StoryState.MeetElder);
+            }
+            return;
+        }
+
         isOngTamRepeatDialogue = false;
     }
 
