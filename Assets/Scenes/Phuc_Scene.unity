@@ -2657,7 +2657,7 @@ Camera:
     m_Bits: 4294967295
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
-  m_TargetDisplay: 1
+  m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 1
   m_AllowMSAA: 1
@@ -3108,7 +3108,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -618, y: -17}
+  m_AnchoredPosition: {x: -888, y: -17}
   m_SizeDelta: {x: 40, y: 320}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &212359064
@@ -10011,7 +10011,6 @@ GameObject:
   - component: {fileID: 559536021}
   - component: {fileID: 559536020}
   - component: {fileID: 559536019}
-  - component: {fileID: 559536018}
   - component: {fileID: 559536017}
   m_Layer: 0
   m_Name: Mada
@@ -10137,20 +10136,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &559536018
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 559536015}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d7262dd79ba53f44a8d4cb9a208d9928, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MaDaAttack
-  damage: 15
-  attackCooldown: 1.5
 --- !u!114 &559536019
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10189,7 +10174,7 @@ MonoBehaviour:
   chasingBool: isChasing
   idleStateName: Idle
   playerCamera: {fileID: 868684947}
-  jumpscareCamera: {fileID: 180299098}
+  jumpscareCamera: {fileID: 1869097453}
   jumpscareSound: {fileID: 1687490058}
   shakeAmount: 0.3
   attackDuration: 1
@@ -13206,8 +13191,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 739956155}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.57222813, z: -0, w: 0.8200945}
-  m_LocalPosition: {x: 41.817467, y: 35.402985, z: -28.383183}
+  m_LocalRotation: {x: -0, y: -0.6001102, z: -0, w: 0.7999174}
+  m_LocalPosition: {x: 41.82745, y: 35.402985, z: -28.346563}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -13220,7 +13205,7 @@ Transform:
   - {fileID: 1586160344}
   - {fileID: 1310345409}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: -69.812, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: -73.756, z: 0}
 --- !u!114 &739956166
 MonoBehaviour:
   m_ObjectHideFlags: 0
